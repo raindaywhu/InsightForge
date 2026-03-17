@@ -1,0 +1,69 @@
+# Task 配置文件
+# 技术报告生成系统 - 任务流程
+
+analyze_task:
+  description: >
+    针对"{topic}"主题进行深度分析研究。
+    
+    请遵循以下步骤：
+    1. 明确研究范围和关键问题
+    2. 从知识库中检索相关的分析框架和方法论
+    3. 运用合适的分析工具进行深入分析
+    4. 整合分析结果，形成有洞察力的结论
+    5. 撰写完整的技术报告（Markdown格式）
+    
+    报告要求：
+    - 结构清晰，逻辑严密
+    - 论点有数据或案例支撑
+    - 包含执行摘要、主体分析、结论建议
+    - 适当使用图表说明（用Markdown表格或图表语法）
+  expected_output: >
+    一份完整的Markdown格式技术报告，包含：
+    - 标题和执行摘要
+    - 分析框架说明
+    - 主体分析内容
+    - 关键发现和洞察
+    - 结论与建议
+  agent: technical_analyst
+
+design_task:
+  description: >
+    将技术报告转化为专业的PPT演示文稿。
+    
+    请遵循以下步骤：
+    1. 分析报告结构，提炼核心信息架构
+    2. 设计PPT大纲（每页标题和核心要点）
+    3. 从知识库中检索PPT设计最佳实践
+    4. 为每页设计具体内容布局
+    5. 输出PPT结构和内容描述
+    
+    PPT设计原则：
+    - 每页一个核心观点
+    - 视觉层次分明
+    - 适当使用图表辅助说明
+    - 控制文字量，突出关键信息
+  expected_output: >
+    一份详细的PPT结构描述（JSON格式），包含：
+    - 封面页
+    - 目录页
+    - 各章节内容页（含标题、要点、图表建议）
+    - 总结页
+    
+    格式示例：
+    {
+      "slides": [
+        {
+          "type": "title",
+          "title": "报告标题",
+          "subtitle": "副标题"
+        },
+        {
+          "type": "content",
+          "title": "页面标题",
+          "points": ["要点1", "要点2"],
+          "chart_suggestion": "图表建议"
+        }
+      ]
+    }
+  agent: presentation_designer
+  output_file: output/ppt_structure.json

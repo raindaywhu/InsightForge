@@ -1,0 +1,21 @@
+[project]
+name = "tech-report-agent"
+version = "0.1.0"
+description = "基于CrewAI的技术报告生成系统，支持RAG知识库"
+authors = [{name = "raind", email = "raind@example.com"}]
+requires-python = ">=3.10"
+dependencies = [
+    "crewai>=1.10.0",
+    "crewai-tools>=1.10.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.scripts]
+tech-report = "tech_report_agent.main:main"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
