@@ -7,11 +7,13 @@ InsightForge 主入口模块
 import os
 import sys
 import argparse
+import json
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
 from .crew import TechReportCrew
+from .ppt_generator import generate_ppt
 
 
 # 确保 UTF-8 输出（Windows 兼容）
@@ -48,8 +50,8 @@ def save_report(report_content: str, output_dir: Path, topic: str, suffix: str =
     return filepath
 
 
-def save_ppt_structure(json_content: str, output_dir: Path, topic: str) -> Path:
-    """保存 PPT 结构 JSON"""
+def save_ppt_structure(json_content: str, output_dir: Path, topic: str) -> tuple[Path, Path | None]:
+    """保存 PPT 结构 JSON 并生成 PPT 文件"""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     safe_topic = "".join(c if c.isalnum() or c in " _-" else "" for c in topic)
     safe_topic = safe_topic[:50].strip().replace(" ", "_")
@@ -59,14 +61,25 @@ def save_ppt_structure(json_content: str, output_dir: Path, topic: str) -> Path:
     filepath.parent.mkdir(parents=True, exist_ok=True)
     
     # 尝试格式化 JSON
+    ppt_data = None
     try:
-        import json
-        data = json.loads(json_content)
-        filepath.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+        ppt_data = json.loads(json_content)
+        filepath.write_text(json.dumps(ppt_data, indent=2, ensure_ascii=False), encoding="utf-8")
     except:
         filepath.write_text(json_content, encoding="utf-8")
     
-    return filepath
+    # 生成 PPT 文件
+    pptx_path = None
+    if ppt_data:
+        try:
+            pptx_filename = f"presentation_{timestamp}_{safe_topic}.pptx"
+            pptx_path = output_dir / "presentations" / pptx_filename
+            generate_ppt(ppt_data, pptx_path)
+        except Exception as e:
+            print(f"[WARN] Failed to generate PPT: {e}")
+            pptx_path = None
+    
+    return filepath, pptx_path
 
 
 def run(topic: str, verbose: bool = True, output_dir: Optional[str] = None) -> dict:
@@ -121,10 +134,13 @@ def run(topic: str, verbose: bool = True, output_dir: Optional[str] = None) -> d
                 outputs["report"] = str(report_path)
                 print_progress("SAVED", f"Report: {report_path}")
             elif 'design' in task_name.lower():
-                # 保存 PPT 结构
-                ppt_path = save_ppt_structure(content, out_dir, topic)
+                # 保存 PPT 结构并生成 PPT
+                ppt_path, pptx_path = save_ppt_structure(content, out_dir, topic)
                 outputs["ppt_structure"] = str(ppt_path)
                 print_progress("SAVED", f"PPT Structure: {ppt_path}")
+                if pptx_path:
+                    outputs["pptx"] = str(pptx_path)
+                    print_progress("SAVED", f"PPT File: {pptx_path}")
             else:
                 # 其他任务输出
                 other_path = save_report(content, out_dir, topic, suffix=f"_{task_name}")
