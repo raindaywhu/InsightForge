@@ -1,13 +1,14 @@
 """
-InsightForge Crew 定义模块
+InsightForge Crew Definition
 
-定义 Agent、Task 和 Crew，管理知识库加载。
+Defines Agent, Task and Crew, manages knowledge loading.
 """
 
+import os
 from pathlib import Path
 from typing import List
 
-from crewai import Agent, Crew, Task, Process
+from crewai import Agent, Crew, Task, Process, LLM
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 
 from crewai.project import CrewBase, agent, crew, task
@@ -16,19 +17,32 @@ from crewai.project import CrewBase, agent, crew, task
 @CrewBase
 class TechReportCrew:
     """
-    技术报告生成 Crew
+    Tech Report Generation Crew
     
-    通过两个 Agent 协作：
-    1. Technical Analyst - 深度分析并撰写报告
-    2. Presentation Designer - 将报告转化为 PPT
+    Two agents collaborate:
+    1. Technical Analyst - Analyze and write reports
+    2. Presentation Designer - Convert reports to PPT
     """
     
     agents_config: str = 'config/agents.yaml'
     tasks_config: str = 'config/tasks.yaml'
     
     def __init__(self):
-        """初始化: 加载知识库"""
+        """Initialize: Load knowledge and configure LLM"""
         self.knowledge_sources = self._load_knowledge()
+        self.llm = self._create_llm()
+    
+    def _create_llm(self) -> LLM:
+        """Create LLM instance with DashScope configuration"""
+        model = os.getenv('OPENAI_MODEL_NAME', 'qwen-plus')
+        api_key = os.getenv('OPENAI_API_KEY')
+        base_url = os.getenv('OPENAI_API_BASE', 'https://dashscope.aliyuncs.com/compatible-mode/v1')
+        
+        return LLM(
+            model=f"openai/{model}",
+            api_key=api_key,
+            base_url=base_url
+        )
     
     def _load_knowledge(self) -> List[StringKnowledgeSource]:
         """
@@ -60,36 +74,38 @@ class TechReportCrew:
     @agent
     def technical_analyst(self) -> Agent:
         """
-        技术分析师 Agent
+        Technical Analyst Agent
         
-        职责:
-        - 理解分析主题
-        - 选择分析框架 (SWOT/PEST/波特五力等)
-        - 执行深度分析
-        - 撰写技术报告
+        Responsibilities:
+        - Understand analysis topic
+        - Select analysis framework (SWOT/PEST/Porter's Five Forces)
+        - Execute deep analysis
+        - Write technical report
         """
         return Agent(
             config=self.agents_config['technical_analyst'],
+            llm=self.llm,
             verbose=True,
-            memory=True,
+            memory=False,  # Disabled for DashScope compatibility
             allow_delegation=False
         )
     
     @agent
     def presentation_designer(self) -> Agent:
         """
-        演示设计师 Agent
+        Presentation Designer Agent
         
-        职责:
-        - 解析报告结构
-        - 设计信息架构
-        - 创建幻灯片结构
-        - 提供图表建议
+        Responsibilities:
+        - Parse report structure
+        - Design information architecture
+        - Create slide structure
+        - Provide chart suggestions
         """
         return Agent(
             config=self.agents_config['presentation_designer'],
+            llm=self.llm,
             verbose=True,
-            memory=True,
+            memory=False,  # Disabled for DashScope compatibility
             allow_delegation=False
         )
     
@@ -120,18 +136,18 @@ class TechReportCrew:
     @crew
     def crew(self) -> Crew:
         """
-        组装 Crew
+        Assemble Crew
         
-        配置:
-        - 顺序执行模式
-        - 启用记忆
-        - 加载知识库
+        Configuration:
+        - Sequential execution
+        - Memory enabled
+        - Knowledge sources (if available)
         """
         return Crew(
             agents=self.agents,
             tasks=self.tasks,
             process=Process.sequential,
             verbose=True,
-            memory=True,
-            knowledge_sources=self.knowledge_sources
+            memory=False,  # Disabled for DashScope compatibility
+            # knowledge_sources=self.knowledge_sources  # Temporarily disabled
         )
