@@ -71,7 +71,7 @@ InsightForge 是一个 AI 驱动的技术报告生成系统，通过多个 Agent
 │  │  │                    RAG 检索引擎 (CrewAI Built-in)               │ │ │
 │  │  │  ┌───────────────┐  ┌───────────────┐  ┌───────────────────┐   │ │ │
 │  │  │  │  Embedding    │  │  ChromaDB     │  │  Knowledge Source │   │ │ │
-│  │  │  │  (OpenAI)     │  │  (Vector DB)  │  │  (String/File)    │   │ │ │
+│  │  │  │  (DashScope)  │  │  (Vector DB)  │  │  (String/File)    │   │ │ │
 │  │  │  └───────────────┘  └───────────────┘  └───────────────────┘   │ │ │
 │  │  └─────────────────────────────────────────────────────────────────┘ │ │
 │  └──────────────────────────────────────────────────────────────────────┘ │
@@ -89,9 +89,9 @@ InsightForge 是一个 AI 驱动的技术报告生成系统，通过多个 Agent
 │  ┌──────────────────────────────────────────────────────────────────────┐ │
 │  │                         LLM层 (LLM Layer)                            │ │
 │  │  ┌─────────────────────────────────────────────────────────────────┐ │ │
-│  │  │                     OpenAI GPT-4 (可替换)                       │ │ │
-│  │  │  • 模型: gpt-4-turbo / gpt-4o                                   │ │ │
-│  │  │  • Embedding: text-embedding-3-small                            │ │ │
+│  │  │               阿里云 DashScope (国内稳定访问)                    │ │ │
+│  │  │  • 模型: glm-4 / qwen-max                                       │ │ │
+│  │  │  • Embedding: text-embedding-v3                                 │ │ │
 │  │  └─────────────────────────────────────────────────────────────────┘ │ │
 │  └──────────────────────────────────────────────────────────────────────┘ │
 │                                                                            │
@@ -118,7 +118,7 @@ InsightForge 是一个 AI 驱动的技术报告生成系统，通过多个 Agent
 │  │  │ main.py                                                      │   │   │
 │  │  │ • 解析命令行参数                                              │   │   │
 │  │  │ • 创建输出目录                                                │   │   │
-│  │  │ • 加载环境变量 (OPENAI_API_KEY)                              │   │   │
+│  │  │ • 加载环境变量 (DASHSCOPE_API_KEY)                            │   │   │
 │  │  └─────────────────────────────────────────────────────────────┘   │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
 │       │                                                                     │
@@ -129,7 +129,7 @@ InsightForge 是一个 AI 驱动的技术报告生成系统，通过多个 Agent
 │  │  │ TechReportCrew.__init__()                                    │   │   │
 │  │  │ • 加载 knowledge/ 目录下所有 .md 文件                        │   │   │
 │  │  │ • 创建 StringKnowledgeSource 实例                            │   │   │
-│  │  │ • 初始化 Embedding (OpenAI text-embedding-3-small)           │   │   │
+│  │  │ • 初始化 Embedding (DashScope text-embedding-v3)            │   │   │
 │  │  │ • 存入 ChromaDB 向量数据库                                    │   │   │
 │  │  └─────────────────────────────────────────────────────────────┘   │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
@@ -808,12 +808,12 @@ class TechReportCrew:
 ```bash
 # .env 文件
 
-# OpenAI API 配置 (必需)
-OPENAI_API_KEY=sk-xxx
+# 阿里云 DashScope API 配置 (必需)
+DASHSCOPE_API_KEY=sk-xxx
 
 # 模型配置 (可选)
-OPENAI_MODEL_NAME=gpt-4-turbo
-OPENAI_EMBEDDING_MODEL=text-embedding-3-small
+DASHSCOPE_MODEL_NAME=glm-4
+DASHSCOPE_EMBEDDING_MODEL=text-embedding-v3
 
 # ChromaDB 配置 (可选)
 CHROMA_PERSIST_DIRECTORY=./chroma_db
@@ -928,7 +928,7 @@ pip install -e .
 
 # 4. 配置环境变量
 cp .env.example .env
-# 编辑 .env，填入 OPENAI_API_KEY
+# 编辑 .env，填入 DASHSCOPE_API_KEY
 
 # 5. 运行
 insightforge run "分析 OpenAI 在 AI Agent 领域的竞争力"
@@ -1069,21 +1069,21 @@ def generate_chart(data: dict, chart_type: str) -> str:
 ```python
 try:
     result = crew.kickoff(inputs=inputs)
-except openai.RateLimitError:
-    # API 限流，等待重试
-    time.sleep(60)
-    result = crew.kickoff(inputs=inputs)
-except openai.AuthenticationError:
-    # 认证失败，检查 API Key
-    raise ValueError("Invalid OPENAI_API_KEY")
 except Exception as e:
-    # 其他错误
+    # 错误处理：记录日志并重试
     logging.error(f"Crew execution failed: {e}")
-    raise
+    # 检查是否是 API 相关错误
+    if "rate limit" in str(e).lower():
+        time.sleep(60)
+        result = crew.kickoff(inputs=inputs)
+    elif "authentication" in str(e).lower() or "api key" in str(e).lower():
+        raise ValueError("Invalid DASHSCOPE_API_KEY")
+    else:
+        raise
 ```
 
 ---
 
-> 文档版本：1.0  
-> 最后更新：2026-03-17  
+> 文档版本：1.1  
+> 最后更新：2026-03-18  
 > 维护者：万一

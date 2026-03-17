@@ -65,7 +65,7 @@
 | 1.1.1 | 创建 conda 环境 | `conda create -n insightforge python=3.11 -y` | `conda env list` 显示环境 |
 | 1.1.2 | 安装核心依赖 | `pip install crewai chromadb mem0ai` | 无报错 |
 | 1.1.3 | 安装项目 | `pip install -e .` | `pip show tech-report-agent` |
-| 1.1.4 | 配置环境变量 | 复制 `.env.example` 为 `.env`，填入 API Key | 文件存在，值正确 |
+| 1.1.4 | 配置环境变量 | 复制 `.env.example` 为 `.env`，填入 DASHSCOPE_API_KEY | 文件存在，值正确 |
 | 1.1.5 | 验证安装 | 运行简单测试脚本 | 无报错 |
 
 **验收脚本**：
@@ -73,22 +73,23 @@
 # test_env.py
 import crewai
 import chromadb
-import mem0ai
-from openai import OpenAI
 import os
+from openai import OpenAI
 
 print(f"crewai: {crewai.__version__}")
 print(f"chromadb: {chromadb.__version__}")
-print(f"mem0ai: {mem0ai.__version__}")
 
-# 测试 OpenAI 连接
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# 测试 DashScope API 连接
+client = OpenAI(
+    api_key=os.getenv("DASHSCOPE_API_KEY"),
+    base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
+)
 response = client.chat.completions.create(
-    model="gpt-4o-mini",
+    model="glm-4",
     messages=[{"role": "user", "content": "Hello"}],
     max_tokens=10
 )
-print(f"OpenAI: {response.choices[0].message.content}")
+print(f"DashScope API: {response.choices[0].message.content}")
 ```
 
 ---

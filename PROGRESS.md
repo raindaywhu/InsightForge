@@ -115,7 +115,9 @@ Phase 1 总任务数: 34
 
 | 问题 | 影响 | 状态 | 解决方案 |
 |------|------|------|---------|
-| 缺少 OPENAI_API_KEY | 无法运行测试 | 待解决 | 用户需提供 API Key |
+| ~~缺少 OPENAI_API_KEY~~ | ~~无法运行测试~~ | ✅ 已解决 | 使用 OpenClaw 中的 DASHSCOPE_API_KEY |
+
+> **注意**：API Key 已配置在 .env 文件中，.env 已被 .gitignore 排除，不会上传到 GitHub。
 
 ---
 
