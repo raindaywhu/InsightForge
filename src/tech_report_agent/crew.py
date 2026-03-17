@@ -32,31 +32,29 @@ class TechReportCrew:
     
     def _load_knowledge(self) -> List[StringKnowledgeSource]:
         """
-        加载知识库
-        
-        从 knowledge/ 目录加载所有 .md 文件
+        Load knowledge base from knowledge/ directory
         """
         knowledge_sources = []
         knowledge_dir = Path(__file__).parent.parent.parent / "knowledge"
         
         if not knowledge_dir.exists():
-            print(f"⚠️  知识库目录不存在: {knowledge_dir}")
+            print(f"[WARN] Knowledge directory not found: {knowledge_dir}")
             return knowledge_sources
         
-        # 遍历所有 .md 文件
+        # Find all .md files
         md_files = list(knowledge_dir.rglob("*.md"))
         
         for md_file in md_files:
             try:
                 content = md_file.read_text(encoding="utf-8")
-                if content.strip():  # 忽略空文件
+                if content.strip():  # Skip empty files
                     ks = StringKnowledgeSource(content=content)
                     knowledge_sources.append(ks)
-                    print(f"📚 加载知识: {md_file.relative_to(knowledge_dir)}")
+                    print(f"[OK] Loaded: {md_file.relative_to(knowledge_dir)}")
             except Exception as e:
-                print(f"⚠️  加载失败 {md_file}: {e}")
+                print(f"[WARN] Failed to load {md_file}: {e}")
         
-        print(f"✅ 知识库加载完成: {len(knowledge_sources)} 个文件\n")
+        print(f"[INFO] Knowledge base loaded: {len(knowledge_sources)} files\n")
         return knowledge_sources
     
     @agent
