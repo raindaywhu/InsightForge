@@ -65,6 +65,9 @@ design_task:
   description: >
     将技术报告转化为专业的PPT演示文稿结构。
     
+    ## 输入报告
+    你需要将上一阶段生成的技术报告转化为PPT结构。
+    
     ## 执行步骤
     
     ### 1. 分析报告结构
@@ -77,45 +80,35 @@ design_task:
     - 确定每页的核心信息
     - 规划信息流动顺序
     
-    ### 3. 检索设计原则
-    - 从知识库中检索PPT设计最佳实践
-    - 应用配色和排版原则
-    - 选择合适的图表类型
-    
-    ### 4. 创建幻灯片结构
-    - 设计每页的具体内容
-    - 提供图表和视觉建议
+    ### 3. 创建幻灯片结构
+    - 设计每页的具体内容（不超过10-15页）
+    - 每页内容精简为3-5个要点
     - 确保信息层次清晰
     
     ## PPT设计原则
     
     - **简洁**：每页不超过3-5个要点
     - **聚焦**：突出核心信息
-    - **视觉**：善用图表替代文字
+    - **视觉**：建议图表类型
     - **一致**：统一的风格和配色
     
     ## 输出格式
     
-    输出JSON结构的PPT设计文档，包含：
-    - 元数据（标题、作者、日期）
-    - 幻灯片数组（类型、标题、内容、图表建议）
+    输出JSON结构的PPT设计文档，必须包含完整的幻灯片数组。
     
   expected_output: >
-    一份详细的PPT结构描述，JSON格式，包含：
+    一份详细的PPT结构描述，JSON格式，包含完整的slides数组：
     {
       "metadata": {
         "title": "报告标题",
         "author": "InsightForge",
-        "created_at": "日期"
+        "date": "日期"
       },
       "slides": [
-        {
-          "type": "title|content|section|chart",
-          "title": "幻灯片标题",
-          "content": [...],
-          "chart_suggestion": "图表建议（如有）"
-        }
+        {"slide_number": 1, "type": "title", "title": "标题页", "content": ["主标题", "副标题"]},
+        {"slide_number": 2, "type": "agenda", "title": "目录", "content": ["要点1", "要点2", "要点3"]},
+        ...更多幻灯片
       ]
     }
   agent: presentation_designer
-  output_file: output/ppt_structure.json
+  context: [analyze_task]
