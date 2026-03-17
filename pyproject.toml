@@ -1,21 +1,71 @@
 [project]
-name = "tech-report-agent"
+name = "insightforge"
 version = "0.1.0"
-description = "基于CrewAI的技术报告生成系统，支持RAG知识库"
-authors = [{name = "raind", email = "raind@example.com"}]
-requires-python = ">=3.10"
+description = "AI驱动的技术报告生成系统 - 基于 CrewAI 多Agent协作 + RAG知识增强"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [
+    {name = "万一", email = "wanyi@example.com"}
+]
+keywords = ["ai", "agent", "crewai", "rag", "report-generation", "ppt"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
 dependencies = [
-    "crewai>=1.10.0",
-    "crewai-tools>=1.10.0",
+    "crewai>=0.86.0",
+    "crewai-tools>=0.15.0",
+    "chromadb>=0.4.0",
+    "mem0ai>=1.0.0",
+    "python-pptx>=1.0.0",
     "python-dotenv>=1.0.0",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=24.0.0",
+    "ruff>=0.3.0",
+    "mypy>=1.8.0",
 ]
 
 [project.scripts]
-tech-report = "tech_report_agent.main:main"
+insightforge = "tech_report_agent.main:main"
+
+[project.urls]
+Homepage = "https://github.com/raindaywhu/InsightForge"
+Documentation = "https://github.com/raindaywhu/InsightForge#readme"
+Repository = "https://github.com/raindaywhu/InsightForge.git"
+Issues = "https://github.com/raindaywhu/InsightForge/issues"
 
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+tech_report_agent = ["config/*.yaml"]
+
+[tool.black]
+line-length = 88
+target-version = ['py311']
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
