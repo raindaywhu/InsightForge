@@ -13,6 +13,58 @@ from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
 from pptx.enum.shapes import MSO_SHAPE
 
 
+def _fix_unescaped_quotes(json_str: str) -> str:
+    """
+    Fix unescaped quotes inside JSON string values.
+    This is a heuristic approach - we try to identify quotes that are likely
+    inside string values (not JSON delimiters) and escape them.
+    """
+    result = []
+    in_string = False
+    escape_next = False
+    
+    i = 0
+    while i < len(json_str):
+        c = json_str[i]
+        
+        if escape_next:
+            result.append(c)
+            escape_next = False
+            i += 1
+            continue
+            
+        if c == '\\':
+            result.append(c)
+            escape_next = True
+            i += 1
+            continue
+            
+        if c == '"':
+            if not in_string:
+                # Starting a string
+                in_string = True
+                result.append(c)
+            else:
+                # We're in a string and see a quote
+                # Check if this looks like an internal quote or string end
+                # Look ahead: if next non-space char is : or , or } or ], it's likely string end
+                rest = json_str[i+1:].lstrip()
+                if rest and rest[0] in ':,}]':
+                    # This is likely the end of the string
+                    in_string = False
+                    result.append(c)
+                else:
+                    # This is likely an internal quote - escape it
+                    result.append('\\"')
+            i += 1
+            continue
+        
+        result.append(c)
+        i += 1
+    
+    return ''.join(result)
+
+
 class PPTGenerator:
     """Generate PowerPoint presentations from JSON structure."""
 
@@ -62,10 +114,29 @@ class PPTGenerator:
                 content = f.read()
             # Remove markdown code block markers if present
             if content.startswith("```"):
-                content = content.split("\n", 1)[1]  # Remove first line
-            if content.endswith("```"):
-                content = content.rsplit("```", 1)[0]  # Remove last marker
-            ppt_structure = json.loads(content)
+                # Find the end of the first line
+                first_newline = content.find("\n")
+                if first_newline != -1:
+                    content = content[first_newline + 1:]
+            if content.rstrip().endswith("```"):
+                # Remove trailing ``` marker
+                content = content.rstrip()[:-3].rstrip()
+            # Fix unescaped quotes in JSON
+            content = _fix_unescaped_quotes(content)
+            try:
+                ppt_structure = json.loads(content)
+            except json.JSONDecodeError as e:
+                # Try to extract JSON from content
+                import re
+                # Find JSON object boundaries
+                match = re.search(r'\{[\s\S]*\}', content)
+                if match:
+                    try:
+                        ppt_structure = json.loads(match.group())
+                    except:
+                        raise ValueError(f"Failed to parse JSON structure: {e}")
+                else:
+                    raise ValueError(f"No valid JSON found in file: {e}")
 
         # Validate structure
         if "slides" not in ppt_structure:
