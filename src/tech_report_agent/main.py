@@ -50,7 +50,7 @@ def save_report(report_content: str, output_dir: Path, topic: str, suffix: str =
     return filepath
 
 
-def save_ppt_structure(json_content: str, output_dir: Path, topic: str) -> tuple[Path, Path | None]:
+def save_ppt_structure(json_content: str, output_dir: Path, topic: str, theme: str = "tech_blue") -> tuple[Path, Path | None]:
     """保存 PPT 结构 JSON 并生成 PPT 文件"""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     safe_topic = "".join(c if c.isalnum() or c in " _-" else "" for c in topic)
@@ -74,7 +74,7 @@ def save_ppt_structure(json_content: str, output_dir: Path, topic: str) -> tuple
         try:
             pptx_filename = f"presentation_{timestamp}_{safe_topic}.pptx"
             pptx_path = output_dir / "presentations" / pptx_filename
-            generate_ppt(ppt_data, pptx_path)
+            generate_ppt(ppt_data, pptx_path, theme=theme)
         except Exception as e:
             print(f"[WARN] Failed to generate PPT: {e}")
             pptx_path = None
@@ -82,7 +82,7 @@ def save_ppt_structure(json_content: str, output_dir: Path, topic: str) -> tuple
     return filepath, pptx_path
 
 
-def run(topic: str, verbose: bool = True, output_dir: Optional[str] = None) -> dict:
+def run(topic: str, verbose: bool = True, output_dir: Optional[str] = None, theme: str = "tech_blue") -> dict:
     """
     执行技术报告生成流程
     
@@ -90,6 +90,7 @@ def run(topic: str, verbose: bool = True, output_dir: Optional[str] = None) -> d
         topic: 分析主题
         verbose: 是否输出详细日志
         output_dir: 输出目录路径
+        theme: PPT 主题 (tech_blue, business_gray, minimal_white, nature_green)
         
     Returns:
         包含输出文件路径的字典
@@ -135,7 +136,7 @@ def run(topic: str, verbose: bool = True, output_dir: Optional[str] = None) -> d
                 print_progress("SAVED", f"Report: {report_path}")
             elif 'design' in task_name.lower():
                 # 保存 PPT 结构并生成 PPT
-                ppt_path, pptx_path = save_ppt_structure(content, out_dir, topic)
+                ppt_path, pptx_path = save_ppt_structure(content, out_dir, topic, theme=theme)
                 outputs["ppt_structure"] = str(ppt_path)
                 print_progress("SAVED", f"PPT Structure: {ppt_path}")
                 if pptx_path:
@@ -180,12 +181,16 @@ Examples:
     run_parser = subparsers.add_parser("run", help="Generate technical report")
     run_parser.add_argument("topic", help="Analysis topic")
     run_parser.add_argument("--output", "-o", help="Output directory", default="output")
+    run_parser.add_argument("--theme", "-t", 
+                            choices=["tech_blue", "business_gray", "minimal_white", "nature_green"],
+                            default="tech_blue",
+                            help="PPT theme (default: tech_blue)")
     run_parser.add_argument("--quiet", "-q", action="store_true", help="Quiet mode")
     
     args = parser.parse_args()
     
     if args.command == "run":
-        run(topic=args.topic, verbose=not args.quiet, output_dir=args.output)
+        run(topic=args.topic, verbose=not args.quiet, output_dir=args.output, theme=args.theme)
     else:
         parser.print_help()
 

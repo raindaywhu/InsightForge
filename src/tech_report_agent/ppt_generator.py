@@ -65,18 +65,49 @@ def _fix_unescaped_quotes(json_str: str) -> str:
     return ''.join(result)
 
 
+# Theme configurations
+THEMES = {
+    "tech_blue": {
+        "name": "科技蓝",
+        "title_bg": RGBColor(26, 26, 46),      # Deep navy
+        "accent": RGBColor(233, 69, 96),       # Coral red
+        "text_light": RGBColor(255, 255, 255),  # White
+        "text_dark": RGBColor(51, 51, 51),      # Dark gray
+        "content_bg": RGBColor(248, 249, 250),  # Light gray
+        "header_bg": RGBColor(52, 73, 94),      # Steel blue
+    },
+    "business_gray": {
+        "name": "商务灰",
+        "title_bg": RGBColor(45, 52, 54),       # Charcoal
+        "accent": RGBColor(0, 184, 148),        # Teal
+        "text_light": RGBColor(255, 255, 255),
+        "text_dark": RGBColor(45, 52, 54),
+        "content_bg": RGBColor(245, 246, 250),
+        "header_bg": RGBColor(99, 110, 114),
+    },
+    "minimal_white": {
+        "name": "简约白",
+        "title_bg": RGBColor(255, 255, 255),    # White
+        "accent": RGBColor(0, 123, 255),         # Blue
+        "text_light": RGBColor(51, 51, 51),      # Dark for white bg
+        "text_dark": RGBColor(51, 51, 51),
+        "content_bg": RGBColor(255, 255, 255),
+        "header_bg": RGBColor(240, 240, 240),
+    },
+    "nature_green": {
+        "name": "自然绿",
+        "title_bg": RGBColor(39, 174, 96),       # Green
+        "accent": RGBColor(243, 156, 18),        # Orange
+        "text_light": RGBColor(255, 255, 255),
+        "text_dark": RGBColor(45, 52, 54),
+        "content_bg": RGBColor(245, 250, 245),
+        "header_bg": RGBColor(46, 204, 113),
+    },
+}
+
+
 class PPTGenerator:
     """Generate PowerPoint presentations from JSON structure."""
-
-    # Color scheme (Tech Blue Professional Style)
-    COLORS = {
-        "primary": RGBColor(0, 82, 147),      # Deep Blue
-        "secondary": RGBColor(0, 120, 215),    # Light Blue
-        "accent": RGBColor(255, 153, 0),       # Orange Accent
-        "text_dark": RGBColor(51, 51, 51),     # Dark Gray Text
-        "text_light": RGBColor(255, 255, 255), # White Text
-        "bg_light": RGBColor(240, 248, 255),   # Light Blue Background
-    }
 
     SLIDE_TYPES = {
         "title": "_create_title_slide",
@@ -92,7 +123,13 @@ class PPTGenerator:
     }
 
     def __init__(self, theme: str = "tech_blue"):
-        self.theme = theme
+        """Initialize PPT Generator with theme.
+        
+        Args:
+            theme: Theme name (tech_blue, business_gray, minimal_white, nature_green)
+        """
+        self.theme_name = theme
+        self.theme = THEMES.get(theme, THEMES["tech_blue"])
         self.prs = Presentation()
         self.prs.slide_width = Inches(13.333)  # 16:9 Widescreen
         self.prs.slide_height = Inches(7.5)
@@ -114,21 +151,17 @@ class PPTGenerator:
                 content = f.read()
             # Remove markdown code block markers if present
             if content.startswith("```"):
-                # Find the end of the first line
                 first_newline = content.find("\n")
                 if first_newline != -1:
                     content = content[first_newline + 1:]
             if content.rstrip().endswith("```"):
-                # Remove trailing ``` marker
                 content = content.rstrip()[:-3].rstrip()
             # Fix unescaped quotes in JSON
             content = _fix_unescaped_quotes(content)
             try:
                 ppt_structure = json.loads(content)
             except json.JSONDecodeError as e:
-                # Try to extract JSON from content
                 import re
-                # Find JSON object boundaries
                 match = re.search(r'\{[\s\S]*\}', content)
                 if match:
                     try:
@@ -169,7 +202,7 @@ class PPTGenerator:
             MSO_SHAPE.RECTANGLE, 0, 0, self.prs.slide_width, self.prs.slide_height
         )
         shape.fill.solid()
-        shape.fill.fore_color.rgb = self.COLORS["primary"]
+        shape.fill.fore_color.rgb = self.theme["title_bg"]
         shape.line.fill.background()
 
         # Add title
@@ -184,7 +217,7 @@ class PPTGenerator:
             p.text = content[0]
             p.font.size = Pt(44)
             p.font.bold = True
-            p.font.color.rgb = self.COLORS["text_light"]
+            p.font.color.rgb = self.theme["text_light"]
             p.alignment = PP_ALIGN.CENTER
 
             # Subtitle
@@ -192,7 +225,7 @@ class PPTGenerator:
                 p = tf.add_paragraph()
                 p.text = content[1]
                 p.font.size = Pt(24)
-                p.font.color.rgb = self.COLORS["text_light"]
+                p.font.color.rgb = self.theme["text_light"]
                 p.alignment = PP_ALIGN.CENTER
 
             # Footer
@@ -204,7 +237,7 @@ class PPTGenerator:
                 p = tf.paragraphs[0]
                 p.text = content[2]
                 p.font.size = Pt(14)
-                p.font.color.rgb = self.COLORS["text_light"]
+                p.font.color.rgb = self.theme["text_light"]
                 p.alignment = PP_ALIGN.CENTER
 
     def _create_content_slide(self, slide_data: dict) -> None:
@@ -216,7 +249,7 @@ class PPTGenerator:
             MSO_SHAPE.RECTANGLE, 0, 0, self.prs.slide_width, Inches(1.2)
         )
         header.fill.solid()
-        header.fill.fore_color.rgb = self.COLORS["primary"]
+        header.fill.fore_color.rgb = self.theme["header_bg"]
         header.line.fill.background()
 
         # Add title
@@ -230,7 +263,7 @@ class PPTGenerator:
             p.text = title
             p.font.size = Pt(32)
             p.font.bold = True
-            p.font.color.rgb = self.COLORS["text_light"]
+            p.font.color.rgb = self.theme["text_light"]
 
         # Add content
         content = slide_data.get("content", [])
@@ -247,10 +280,9 @@ class PPTGenerator:
                 else:
                     p = tf.add_paragraph()
                 
-                # Use bullet character
                 p.text = "\u2022 " + item
                 p.font.size = Pt(20)
-                p.font.color.rgb = self.COLORS["text_dark"]
+                p.font.color.rgb = self.theme["text_dark"]
                 p.space_after = Pt(12)
                 p.level = 0
 
@@ -264,7 +296,7 @@ class PPTGenerator:
             p = tf.paragraphs[0]
             p.text = str(slide_num)
             p.font.size = Pt(12)
-            p.font.color.rgb = self.COLORS["text_dark"]
+            p.font.color.rgb = self.theme["text_dark"]
             p.alignment = PP_ALIGN.RIGHT
 
     def _create_closing_slide(self, slide_data: dict) -> None:
@@ -276,65 +308,50 @@ class PPTGenerator:
             MSO_SHAPE.RECTANGLE, 0, 0, self.prs.slide_width, self.prs.slide_height
         )
         shape.fill.solid()
-        shape.fill.fore_color.rgb = self.COLORS["primary"]
+        shape.fill.fore_color.rgb = self.theme["title_bg"]
         shape.line.fill.background()
 
         # Add thank you text
+        thank_box = slide.shapes.add_textbox(
+            Inches(0.5), Inches(2.5), Inches(12.333), Inches(2)
+        )
+        tf = thank_box.text_frame
+        p = tf.paragraphs[0]
+        p.text = "Thank You"
+        p.font.size = Pt(60)
+        p.font.bold = True
+        p.font.color.rgb = self.theme["text_light"]
+        p.alignment = PP_ALIGN.CENTER
+
+        # Add contact info
         content = slide_data.get("content", [])
         if content:
-            # Main text
-            title_box = slide.shapes.add_textbox(
-                Inches(0.5), Inches(2.5), Inches(12.333), Inches(1)
+            contact_box = slide.shapes.add_textbox(
+                Inches(0.5), Inches(4.5), Inches(12.333), Inches(1)
             )
-            tf = title_box.text_frame
-            p = tf.paragraphs[0]
-            p.text = content[0]
-            p.font.size = Pt(48)
-            p.font.bold = True
-            p.font.color.rgb = self.COLORS["text_light"]
-            p.alignment = PP_ALIGN.CENTER
-
-            # Subtext
-            if len(content) > 1:
-                p = tf.add_paragraph()
-                p.text = content[1]
-                p.font.size = Pt(24)
-                p.font.color.rgb = self.COLORS["text_light"]
-                p.alignment = PP_ALIGN.CENTER
-
-            if len(content) > 2:
-                p = tf.add_paragraph()
-                p.text = content[2]
+            tf = contact_box.text_frame
+            for i, item in enumerate(content):
+                if i == 0:
+                    p = tf.paragraphs[0]
+                else:
+                    p = tf.add_paragraph()
+                p.text = item
                 p.font.size = Pt(18)
-                p.font.color.rgb = self.COLORS["text_light"]
+                p.font.color.rgb = self.theme["text_light"]
                 p.alignment = PP_ALIGN.CENTER
 
 
-def generate_ppt(ppt_structure: dict | str, output_path: str | Path) -> str:
+def generate_ppt(ppt_structure: dict | str, output_path: str | Path, theme: str = "tech_blue") -> str:
     """
     Convenience function to generate PPT.
 
     Args:
         ppt_structure: JSON structure dict or path to JSON file
         output_path: Output path for the .pptx file
+        theme: Theme name (tech_blue, business_gray, minimal_white, nature_green)
 
     Returns:
         Path to generated PPT file
     """
-    generator = PPTGenerator()
+    generator = PPTGenerator(theme=theme)
     return generator.generate(ppt_structure, output_path)
-
-
-if __name__ == "__main__":
-    # Test with sample structure
-    import sys
-    
-    if len(sys.argv) < 2:
-        print("Usage: python ppt_generator.py <ppt_structure.json> [output.pptx]")
-        sys.exit(1)
-    
-    input_path = sys.argv[1]
-    output_path = sys.argv[2] if len(sys.argv) > 2 else "output.pptx"
-    
-    result = generate_ppt(input_path, output_path)
-    print(f"PPT generated: {result}")
