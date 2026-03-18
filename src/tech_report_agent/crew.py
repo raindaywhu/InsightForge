@@ -2,11 +2,15 @@
 InsightForge Crew Definition
 
 Defines Agent, Task and Crew, manages knowledge loading.
+
+RAG Knowledge Architecture:
+- technical_analyst: academic_analysis + report_templates (analysis frameworks)
+- presentation_designer: ppt_skills (design principles, chart types, color guides)
 """
 
 import os
 from pathlib import Path
-from typing import List
+from typing import List, Dict, Any
 
 from crewai import Agent, Crew, Task, Process, LLM
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
@@ -16,7 +20,6 @@ from crewai.project import CrewBase, agent, crew, task
 
 
 # DashScope embedder configuration (OpenAI-compatible API)
-# Load from environment variables - use separate embedding config
 EMBEDDING_API_KEY = os.getenv("EMBEDDING_API_KEY", os.getenv("OPENAI_API_KEY", ""))
 EMBEDDING_API_BASE = os.getenv("EMBEDDING_API_BASE", "https://dashscope.aliyuncs.com/compatible-mode/v1")
 EMBEDDING_MODEL = os.getenv("DASHSCOPE_EMBEDDING_MODEL", "text-embedding-v3")
@@ -46,18 +49,30 @@ class TechReportCrew:
     """
     Tech Report Generation Crew
     
-    Two agents collaborate:
-    1. Technical Analyst - Analyze and write reports
-    2. Presentation Designer - Convert reports to PPT
+    Two agents collaborate with dedicated knowledge sources:
+    1. Technical Analyst - Uses analysis frameworks (SWOT, PEST, Porter's, etc.)
+    2. Presentation Designer - Uses PPT design principles
+    
+    RAG Knowledge Categories:
+    - academic_analysis/ → Technical Analyst (analysis frameworks)
+    - report_templates/  → Technical Analyst (report structure)
+    - ppt_skills/        → Presentation Designer (design principles)
     """
     
     agents_config: str = 'config/agents.yaml'
     tasks_config: str = 'config/tasks.yaml'
     
     def __init__(self):
-        """Initialize: Load knowledge and configure LLM"""
+        """Initialize: Load knowledge by category and configure LLM"""
+        # Knowledge storage with DashScope embeddings
         self.knowledge_storage = self._create_knowledge_storage()
-        self.knowledge_sources = self._load_knowledge()
+        
+        # Load knowledge by category for different agents
+        self.knowledge_by_category = self._load_knowledge_by_category()
+        
+        # Combined knowledge sources for Crew-level config
+        self.knowledge_sources = self._get_all_knowledge_sources()
+        
         self.llm = self._create_llm()
     
     def _create_llm(self) -> LLM:
@@ -73,79 +88,89 @@ class TechReportCrew:
         )
     
     def _create_knowledge_storage(self) -> KnowledgeStorage:
-        """
-        Create KnowledgeStorage with DashScope embeddings (OpenAI-compatible).
-        """
+        """Create KnowledgeStorage with DashScope embeddings."""
         return KnowledgeStorage(embedder=DASHSCOPE_EMBEDDER_CONFIG)
     
-    def _load_knowledge(self) -> List[StringKnowledgeSource]:
+    def _load_knowledge_by_category(self) -> Dict[str, List[StringKnowledgeSource]]:
         """
-        Load knowledge base from knowledge/ directory
-        Uses custom KnowledgeStorage with ONNX embeddings.
+        Load knowledge base by category for different agents.
+        
+        Categories:
+        - 'analyst': academic_analysis/ + report_templates/ → Technical Analyst
+        - 'designer': ppt_skills/ → Presentation Designer
         """
-        knowledge_sources = []
         knowledge_dir = Path(__file__).parent.parent.parent / "knowledge"
         
-        if not knowledge_dir.exists():
-            print(f"[WARN] Knowledge directory not found: {knowledge_dir}")
-            return knowledge_sources
+        categories = {
+            'analyst': ['academic_analysis', 'report_templates'],  # 分析方法论 + 报告模板
+            'designer': ['ppt_skills']  # PPT 设计技巧
+        }
         
-        # Find all .md files
-        md_files = list(knowledge_dir.rglob("*.md"))
+        result = {}
         
-        for md_file in md_files:
-            try:
-                content = md_file.read_text(encoding="utf-8")
-                if content.strip():  # Skip empty files
-                    # Create knowledge source with custom storage (ONNX embeddings)
-                    ks = StringKnowledgeSource(
-                        content=content,
-                        storage=self.knowledge_storage
-                    )
-                    knowledge_sources.append(ks)
-                    print(f"[OK] Loaded: {md_file.relative_to(knowledge_dir)}")
-            except Exception as e:
-                print(f"[WARN] Failed to load {md_file}: {e}")
+        for agent_type, subdirs in categories.items():
+            sources = []
+            for subdir in subdirs:
+                subdir_path = knowledge_dir / subdir
+                if subdir_path.exists():
+                    for md_file in subdir_path.glob("*.md"):
+                        try:
+                            content = md_file.read_text(encoding="utf-8")
+                            if content.strip():
+                                ks = StringKnowledgeSource(
+                                    content=content,
+                                    storage=self.knowledge_storage
+                                )
+                                sources.append(ks)
+                                print(f"[OK] {agent_type}: {subdir}/{md_file.name}")
+                        except Exception as e:
+                            print(f"[WARN] Failed to load {md_file}: {e}")
+            result[agent_type] = sources
         
-        print(f"[INFO] Knowledge base loaded: {len(knowledge_sources)} files\n")
-        return knowledge_sources
+        # Print summary
+        total = sum(len(v) for v in result.values())
+        print(f"\n[INFO] Knowledge loaded: {total} files total")
+        print(f"       - Analyst: {len(result.get('analyst', []))} files")
+        print(f"       - Designer: {len(result.get('designer', []))} files\n")
+        
+        return result
+    
+    def _get_all_knowledge_sources(self) -> List[StringKnowledgeSource]:
+        """Combine all knowledge sources for Crew-level config."""
+        all_sources = []
+        for sources in self.knowledge_by_category.values():
+            all_sources.extend(sources)
+        return all_sources
     
     @agent
     def technical_analyst(self) -> Agent:
         """
         Technical Analyst Agent
         
-        Responsibilities:
-        - Understand analysis topic
-        - Select analysis framework (SWOT/PEST/Porter's Five Forces)
-        - Execute deep analysis
-        - Write technical report
+        Knowledge: academic_analysis + report_templates
+        - Analysis frameworks: SWOT, PEST, Porter's Five Forces, etc.
+        - Report structure templates
         
-        Tools Available:
-        - web_search: Web搜索，获取最新行业动态
-        - arxiv_search: arXiv论文检索
-        - arxiv_paper_detail: 获取论文详情
-        - web_fetch: 网页抓取
-        - check_data_freshness: 数据时效验证
-        - format_citation: 引用格式化
+        Tools: web_search, arxiv_search, web_fetch, etc.
         """
-        # 加载搜索工具
         tools = []
         try:
             from .tools import get_search_tools
             tools = get_search_tools()
-            print(f"[INFO] Loaded {len(tools)} search tools: web_search, arxiv_search, web_fetch, etc.")
+            print(f"[INFO] Loaded {len(tools)} search tools")
         except Exception as e:
             print(f"[WARN] Failed to load search tools: {e}")
-            print("[WARN] Agent will work without external data access")
         
         return Agent(
             config=self.agents_config['technical_analyst'],
             llm=self.llm,
-            tools=tools,  # 添加搜索工具
+            tools=tools,
             verbose=True,
-            memory=False,  # Disabled for DashScope compatibility
-            allow_delegation=False
+            memory=False,
+            allow_delegation=False,
+            # Agent-level knowledge: analysis frameworks + report templates
+            knowledge_sources=self.knowledge_by_category.get('analyst', []),
+            embedder=DASHSCOPE_EMBEDDER_CONFIG
         )
     
     @agent
@@ -153,40 +178,32 @@ class TechReportCrew:
         """
         Presentation Designer Agent
         
-        Responsibilities:
-        - Parse report structure
-        - Design information architecture
-        - Create slide structure
-        - Provide chart suggestions
+        Knowledge: ppt_skills
+        - Design principles
+        - Chart type selection
+        - Color and layout guides
         """
         return Agent(
             config=self.agents_config['presentation_designer'],
             llm=self.llm,
             verbose=True,
-            memory=False,  # Disabled for DashScope compatibility
-            allow_delegation=False
+            memory=False,
+            allow_delegation=False,
+            # Agent-level knowledge: PPT design skills
+            knowledge_sources=self.knowledge_by_category.get('designer', []),
+            embedder=DASHSCOPE_EMBEDDER_CONFIG
         )
     
     @task
     def analyze_task(self) -> Task:
-        """
-        分析任务
-        
-        输入: topic (主题)
-        输出: Markdown 技术报告
-        """
+        """分析任务: 输入主题 → 输出 Markdown 技术报告"""
         return Task(
             config=self.tasks_config['analyze_task']
         )
     
     @task
     def design_task(self) -> Task:
-        """
-        设计任务
-        
-        输入: Markdown 报告 (来自 analyze_task)
-        输出: JSON 结构描述
-        """
+        """设计任务: 输入报告 → 输出 JSON PPT 结构"""
         return Task(
             config=self.tasks_config['design_task']
         )
@@ -194,12 +211,11 @@ class TechReportCrew:
     @crew
     def crew(self) -> Crew:
         """
-        Assemble Crew
+        Assemble Crew with RAG knowledge enabled.
         
-        Configuration:
-        - Sequential execution
-        - Memory disabled (DashScope compatibility)
-        - Knowledge sources disabled (embedding API compatibility)
+        Each agent has dedicated knowledge sources:
+        - Technical Analyst: analysis frameworks + report templates
+        - Presentation Designer: PPT design skills
         """
         return Crew(
             agents=self.agents,
@@ -207,8 +223,7 @@ class TechReportCrew:
             process=Process.sequential,
             verbose=True,
             memory=False,  # Disabled for DashScope compatibility
-            # Knowledge sources disabled - requires DashScope embedding API
-            # which is not compatible with GLM-5 Coding API key
-            # knowledge_sources=self.knowledge_sources if self.knowledge_sources else None,
-            # embedder=DASHSCOPE_EMBEDDER_CONFIG
+            # Crew-level knowledge (backup if agent-level not used)
+            knowledge_sources=self.knowledge_sources if self.knowledge_sources else None,
+            embedder=DASHSCOPE_EMBEDDER_CONFIG
         )
