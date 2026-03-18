@@ -173,8 +173,8 @@ class PPTGenerator:
                 if match:
                     try:
                         ppt_structure = json.loads(match.group())
-                    except:
-                        raise ValueError(f"Failed to parse JSON structure: {e}")
+                    except json.JSONDecodeError as inner_e:
+                        raise ValueError(f"Failed to parse JSON structure: {e}, inner: {inner_e}")
                 else:
                     raise ValueError(f"No valid JSON found in file: {e}")
 

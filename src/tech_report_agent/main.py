@@ -98,7 +98,11 @@ def save_ppt_structure(json_content: str, output_dir: Path, topic: str, theme: s
     try:
         ppt_data = json.loads(json_content)
         filepath.write_text(json.dumps(ppt_data, indent=2, ensure_ascii=False), encoding="utf-8")
-    except:
+    except json.JSONDecodeError:
+        # JSON 无效，直接保存原始内容
+        filepath.write_text(json_content, encoding="utf-8")
+    except Exception as e:
+        print(f"警告: 保存 PPT 结构时出错: {e}")
         filepath.write_text(json_content, encoding="utf-8")
     
     # 生成 PPT 文件
