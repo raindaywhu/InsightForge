@@ -157,6 +157,29 @@ Phase 4 总任务数: 22 (新增 4.7 四个子任务)
 
 ## 📝 开发日志
 
+### 2026-03-19 01:40 - RAG Knowledge 系统重新启用 🎉
+
+**重大突破**：
+- ✅ 修复 Embedding API Key 问题
+  - 问题：`.env` 使用了 Coding API Key (`sk-sp-xxx`)
+  - 解决：从 `openclaw.json` 获取正确的 DashScope Key (`sk-f010b66...`)
+  - 结果：Embedding API 测试通过，向量维度 1024
+
+- ✅ 重新启用 CrewAI Knowledge
+  - 修改 `crew.py`，取消 Knowledge 相关代码的注释
+  - 知识库加载成功：8 个文件
+    - Analyst: 5 个文件（学术分析 + 报告模板）
+    - Designer: 3 个文件（PPT 技能）
+
+**影响**：
+- RAG 系统现在可以正常工作！
+- 不再需要依赖 Prompt 注入方案
+- 知识检索将更智能、更灵活
+
+**下一步**：
+- 运行 E2E 测试验证 RAG 效果
+- 评估知识检索质量
+
 ### 2026-03-19 01:35 - 质量基准建立启动 ✅
 
 **完成任务**：
