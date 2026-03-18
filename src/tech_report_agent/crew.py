@@ -120,15 +120,24 @@ class TechReportCrew:
         - Select analysis framework (SWOT/PEST/Porter's Five Forces)
         - Execute deep analysis
         - Write technical report
+        
+        Tools Available:
+        - web_search: Web搜索，获取最新行业动态
+        - arxiv_search: arXiv论文检索
+        - arxiv_paper_detail: 获取论文详情
+        - web_fetch: 网页抓取
+        - check_data_freshness: 数据时效验证
+        - format_citation: 引用格式化
         """
-        # 尝试加载搜索工具
+        # 加载搜索工具
         tools = []
         try:
             from .tools import get_search_tools
             tools = get_search_tools()
-            print("[INFO] Search tools loaded")
+            print(f"[INFO] Loaded {len(tools)} search tools: web_search, arxiv_search, web_fetch, etc.")
         except Exception as e:
             print(f"[WARN] Failed to load search tools: {e}")
+            print("[WARN] Agent will work without external data access")
         
         return Agent(
             config=self.agents_config['technical_analyst'],
