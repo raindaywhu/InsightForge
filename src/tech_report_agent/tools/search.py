@@ -5,7 +5,7 @@ InsightForge 搜索工具
 
 import os
 from typing import Optional, List, Dict, Any
-from crewai_tools import tool
+from crewai.tools import tool
 
 # Tavily 搜索工具
 @tool("Web Search Tool")
@@ -26,7 +26,7 @@ def web_search(query: str, max_results: int = 5) -> str:
         # 获取 API Key
         api_key = os.getenv("TAVILY_API_KEY")
         if not api_key:
-            return "错误: 未配置 TAVILY_API_KEY 环境变量"
+            return "错误: 未配置 TAVILY_API_KEY 环境变量。请在 .env 文件中添加 TAVILY_API_KEY=your-api-key"
         
         # 执行搜索
         client = TavilyClient(api_key=api_key)
