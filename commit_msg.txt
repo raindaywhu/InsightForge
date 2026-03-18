@@ -1,0 +1,7 @@
+fix: configure DashScope Embedding API for RAG knowledge base
+
+- Use DashScope Embedding API (text-embedding-v4) instead of ONNX
+- Fix embedder config param: model -> model_name
+- Clear old ChromaDB cache to resolve embedding conflict
+- Knowledge base test passed: 8 files loaded successfully
+- Update PROGRESS.md
