@@ -106,9 +106,5 @@ def test_full_pipeline():
 
 
 if __name__ == "__main__":
-    # 测试主题
-    topic = "AI Agent 技术趋势 2024"
-    language = "zh"
-    
-    success = test_full_pipeline(topic, language)
+    success = test_full_pipeline()
     sys.exit(0 if success else 1)
