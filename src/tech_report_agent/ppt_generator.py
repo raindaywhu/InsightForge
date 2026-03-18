@@ -11,6 +11,8 @@ from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
 from pptx.enum.shapes import MSO_SHAPE
+from pptx.chart.data import CategoryChartData
+from pptx.enum.chart import XL_CHART_TYPE, XL_LEGEND_POSITION
 
 
 def _fix_unescaped_quotes(json_str: str) -> str:
@@ -116,7 +118,8 @@ class PPTGenerator:
         "methodology": "_create_content_slide",
         "analysis": "_create_content_slide",
         "diagram": "_create_content_slide",
-        "chart": "_create_content_slide",
+        "chart": "_create_chart_slide",
+        "data": "_create_chart_slide",  # data 类型也用图表
         "conclusion": "_create_content_slide",
         "recommendations": "_create_content_slide",
         "closing": "_create_closing_slide",
@@ -339,6 +342,127 @@ class PPTGenerator:
                 p.font.size = Pt(18)
                 p.font.color.rgb = self.theme["text_light"]
                 p.alignment = PP_ALIGN.CENTER
+
+    def _create_chart_slide(self, slide_data: dict) -> None:
+        """Create slide with chart visualization.
+        
+        Expected slide_data format:
+        {
+            "type": "chart",
+            "title": "Chart Title",
+            "chart_type": "bar" | "column" | "line" | "pie",
+            "chart_data": {
+                "categories": ["Cat1", "Cat2", "Cat3"],
+                "series": [
+                    {"name": "Series 1", "values": [10, 20, 30]},
+                    {"name": "Series 2", "values": [15, 25, 35]}
+                ]
+            },
+            "content": ["Additional bullet points"]  # optional
+        }
+        """
+        slide = self.prs.slides.add_slide(self.prs.slide_layouts[6])  # Blank
+
+        # Add header bar
+        header = slide.shapes.add_shape(
+            MSO_SHAPE.RECTANGLE, 0, 0, self.prs.slide_width, Inches(1.2)
+        )
+        header.fill.solid()
+        header.fill.fore_color.rgb = self.theme["header_bg"]
+        header.line.fill.background()
+
+        # Add title
+        title = slide_data.get("title", "")
+        if title:
+            title_box = slide.shapes.add_textbox(
+                Inches(0.5), Inches(0.25), Inches(12.333), Inches(0.7)
+            )
+            tf = title_box.text_frame
+            p = tf.paragraphs[0]
+            p.text = title
+            p.font.size = Pt(32)
+            p.font.bold = True
+            p.font.color.rgb = self.theme["text_light"]
+
+        # Check if chart_data exists
+        chart_data = slide_data.get("chart_data")
+        if chart_data:
+            chart_type = slide_data.get("chart_type", "column")
+            self._add_chart(slide, chart_type, chart_data)
+
+        # Add bullet points if provided (below chart or as main content)
+        content = slide_data.get("content", [])
+        if content:
+            # Position below chart or full height if no chart
+            top = Inches(4.8) if chart_data else Inches(1.5)
+            height = Inches(2.2) if chart_data else Inches(5.5)
+            
+            content_box = slide.shapes.add_textbox(
+                Inches(0.7), top, Inches(11.933), height
+            )
+            tf = content_box.text_frame
+            tf.word_wrap = True
+
+            for i, item in enumerate(content):
+                if i == 0:
+                    p = tf.paragraphs[0]
+                else:
+                    p = tf.add_paragraph()
+                
+                p.text = "\u2022 " + item
+                p.font.size = Pt(16) if chart_data else Pt(20)
+                p.font.color.rgb = self.theme["text_dark"]
+                p.space_after = Pt(8)
+                p.level = 0
+
+    def _add_chart(self, slide, chart_type: str, chart_data: dict) -> None:
+        """Add a chart to the slide.
+        
+        Args:
+            slide: The slide to add chart to
+            chart_type: Type of chart (bar, column, line, pie)
+            chart_data: Chart data with categories and series
+        """
+        # Prepare chart data
+        data = CategoryChartData()
+        data.categories = chart_data.get("categories", [])
+        
+        series_list = chart_data.get("series", [])
+        for series in series_list:
+            data.add_series(series.get("name", ""), series.get("values", []))
+
+        # Map chart type to python-pptx chart type
+        chart_type_map = {
+            "bar": XL_CHART_TYPE.BAR_CLUSTERED,
+            "column": XL_CHART_TYPE.COLUMN_CLUSTERED,
+            "line": XL_CHART_TYPE.LINE,
+            "pie": XL_CHART_TYPE.PIE,
+        }
+        
+        xl_chart_type = chart_type_map.get(chart_type, XL_CHART_TYPE.COLUMN_CLUSTERED)
+        
+        # Add chart to slide
+        x, y, cx, cy = Inches(0.7), Inches(1.5), Inches(11.933), Inches(3.2)
+        chart = slide.shapes.add_chart(
+            xl_chart_type, x, y, cx, cy, data
+        ).chart
+
+        # Style the chart
+        chart.has_legend = True
+        chart.legend.position = XL_LEGEND_POSITION.BOTTOM
+        chart.legend.include_in_layout = False
+        
+        # Style plot area
+        plot = chart.plots[0]
+        plot.has_data_labels = True
+        
+        # For pie charts, show percentages
+        if chart_type == "pie":
+            plot.data_labels.show_percentage = True
+            plot.data_labels.show_value = False
+        else:
+            plot.data_labels.show_value = True
+            plot.data_labels.show_percentage = False
 
 
 def generate_ppt(ppt_structure: dict | str, output_path: str | Path, theme: str = "tech_blue") -> str:
