@@ -6,6 +6,20 @@ InsightForge 主入口模块
 
 import os
 import sys
+
+# 【重要】Windows UTF-8 编码设置 - 必须在其他导入之前
+if sys.platform == "win32":
+    # 设置控制台代码页为 UTF-8
+    os.system("chcp 65001 >nul 2>&1")
+    # 设置环境变量
+    os.environ["PYTHONIOENCODING"] = "utf-8"
+    os.environ["PYTHONUTF8"] = "1"
+    # 重新配置标准输出
+    if hasattr(sys.stdout, 'reconfigure'):
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    if hasattr(sys.stderr, 'reconfigure'):
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+
 import argparse
 import json
 from datetime import datetime
@@ -34,12 +48,6 @@ from .crew import TechReportCrew
 from .ppt_generator import generate_ppt
 
 
-# 确保 UTF-8 输出（Windows 兼容）
-if sys.platform == "win32":
-    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
-    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
-
-
 def get_output_dir() -> Path:
     """获取输出目录"""
     output_dir = Path(os.getenv("OUTPUT_DIR", "output"))
@@ -56,9 +64,12 @@ def print_progress(step: str, message: str):
 def save_report(report_content: str, output_dir: Path, topic: str, suffix: str = "") -> Path:
     """保存 Markdown 报告"""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    # 清理主题名称，用于文件名
-    safe_topic = "".join(c if c.isalnum() or c in " _-" else "" for c in topic)
+    # 只保留 ASCII 字母数字，避免 Windows 中文编码问题
+    safe_topic = "".join(c if c.isascii() and (c.isalnum() or c in " _-") else "" for c in topic)
     safe_topic = safe_topic[:50].strip().replace(" ", "_")
+    # 如果 safe_topic 为空，使用时间戳
+    if not safe_topic or safe_topic == "_":
+        safe_topic = timestamp
     
     filename = f"report_{timestamp}_{safe_topic}{suffix}.md"
     filepath = output_dir / "reports" / filename
@@ -71,8 +82,12 @@ def save_report(report_content: str, output_dir: Path, topic: str, suffix: str =
 def save_ppt_structure(json_content: str, output_dir: Path, topic: str, theme: str = "tech_blue") -> tuple[Path, Path | None]:
     """保存 PPT 结构 JSON 并生成 PPT 文件"""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    safe_topic = "".join(c if c.isalnum() or c in " _-" else "" for c in topic)
+    # 只保留 ASCII 字母数字，避免 Windows 中文编码问题
+    safe_topic = "".join(c if c.isascii() and (c.isalnum() or c in " _-") else "" for c in topic)
     safe_topic = safe_topic[:50].strip().replace(" ", "_")
+    # 如果 safe_topic 为空，使用时间戳
+    if not safe_topic or safe_topic == "_":
+        safe_topic = timestamp
     
     filename = f"ppt_structure_{timestamp}_{safe_topic}.json"
     filepath = output_dir / "presentations" / filename
