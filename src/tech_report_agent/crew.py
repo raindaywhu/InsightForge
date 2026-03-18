@@ -16,18 +16,27 @@ from crewai.project import CrewBase, agent, crew, task
 
 
 # DashScope embedder configuration (OpenAI-compatible API)
-# Note: CrewAI uses OpenAI client internally, so we need to set env vars
-import os
-os.environ["OPENAI_EMBEDDING_MODEL"] = "text-embedding-v4"
-os.environ["OPENAI_EMBEDDING_API_KEY"] = "REDACTED_API_KEY"
-os.environ["OPENAI_EMBEDDING_API_BASE"] = "https://dashscope.aliyuncs.com/compatible-mode/v1/"
+# Load from environment variables - use separate embedding config
+EMBEDDING_API_KEY = os.getenv("EMBEDDING_API_KEY", os.getenv("OPENAI_API_KEY", ""))
+EMBEDDING_API_BASE = os.getenv("EMBEDDING_API_BASE", "https://dashscope.aliyuncs.com/compatible-mode/v1")
+EMBEDDING_MODEL = os.getenv("DASHSCOPE_EMBEDDING_MODEL", "text-embedding-v3")
+
+# Set environment variables for CrewAI's internal OpenAI client
+os.environ["OPENAI_EMBEDDING_MODEL"] = EMBEDDING_MODEL
+os.environ["OPENAI_EMBEDDING_API_KEY"] = EMBEDDING_API_KEY
+os.environ["OPENAI_EMBEDDING_API_BASE"] = EMBEDDING_API_BASE
+
+# ChromaDB uses CHROMA_ prefix for OpenAI embedding function
+os.environ["CHROMA_OPENAI_API_KEY"] = EMBEDDING_API_KEY
+os.environ["CHROMA_OPENAI_API_BASE"] = EMBEDDING_API_BASE
+os.environ["CHROMA_OPENAI_EMBEDDING_MODEL"] = EMBEDDING_MODEL
 
 DASHSCOPE_EMBEDDER_CONFIG = {
     "provider": "openai",
     "config": {
-        "model_name": "text-embedding-v4",
-        "api_key": "REDACTED_API_KEY",
-        "api_base": "https://dashscope.aliyuncs.com/compatible-mode/v1/"
+        "model_name": EMBEDDING_MODEL,
+        "api_key": EMBEDDING_API_KEY,
+        "api_base": EMBEDDING_API_BASE
     }
 }
 
@@ -181,7 +190,7 @@ class TechReportCrew:
         Configuration:
         - Sequential execution
         - Memory disabled (DashScope compatibility)
-        - Knowledge sources enabled (DashScope embeddings)
+        - Knowledge sources disabled (embedding API compatibility)
         """
         return Crew(
             agents=self.agents,
@@ -189,6 +198,8 @@ class TechReportCrew:
             process=Process.sequential,
             verbose=True,
             memory=False,  # Disabled for DashScope compatibility
-            knowledge_sources=self.knowledge_sources if self.knowledge_sources else None,
-            embedder=DASHSCOPE_EMBEDDER_CONFIG
+            # Knowledge sources disabled - requires DashScope embedding API
+            # which is not compatible with GLM-5 Coding API key
+            # knowledge_sources=self.knowledge_sources if self.knowledge_sources else None,
+            # embedder=DASHSCOPE_EMBEDDER_CONFIG
         )

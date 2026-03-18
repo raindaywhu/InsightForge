@@ -12,6 +12,24 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+# 加载环境变量 - 明确指定 .env 文件路径
+from dotenv import load_dotenv
+from pathlib import Path
+
+# 从项目根目录加载 .env
+env_path = Path(__file__).parent.parent.parent / ".env"
+load_dotenv(env_path)
+
+# 设置 ChromaDB 需要的环境变量（在导入 crew 之前）
+# ChromaDB 使用 CHROMA_ 前缀的环境变量
+chroma_api_key = os.getenv("EMBEDDING_API_KEY", os.getenv("OPENAI_API_KEY", ""))
+chroma_api_base = os.getenv("EMBEDDING_API_BASE", "https://dashscope.aliyuncs.com/compatible-mode/v1")
+chroma_model = os.getenv("DASHSCOPE_EMBEDDING_MODEL", "text-embedding-v3")
+
+os.environ["CHROMA_OPENAI_API_KEY"] = chroma_api_key
+os.environ["CHROMA_OPENAI_API_BASE"] = chroma_api_base
+os.environ["CHROMA_OPENAI_EMBEDDING_MODEL"] = chroma_model
+
 from .crew import TechReportCrew
 from .ppt_generator import generate_ppt
 

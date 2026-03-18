@@ -26,7 +26,8 @@ def web_search(query: str, max_results: int = 5) -> str:
         # 获取 API Key
         api_key = os.getenv("TAVILY_API_KEY")
         if not api_key:
-            return "错误: 未配置 TAVILY_API_KEY 环境变量。请在 .env 文件中添加 TAVILY_API_KEY=your-api-key"
+            # 没有 API Key 时优雅降级 - 返回提示但不报错
+            return "[提示] 未配置 TAVILY_API_KEY，跳过网络搜索。将基于知识库进行分析。"
         
         # 执行搜索
         client = TavilyClient(api_key=api_key)
