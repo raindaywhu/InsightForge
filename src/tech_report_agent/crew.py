@@ -10,8 +10,26 @@ from typing import List
 
 from crewai import Agent, Crew, Task, Process, LLM
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
+from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
 
 from crewai.project import CrewBase, agent, crew, task
+
+
+# DashScope embedder configuration (OpenAI-compatible API)
+# Note: CrewAI uses OpenAI client internally, so we need to set env vars
+import os
+os.environ["OPENAI_EMBEDDING_MODEL"] = "text-embedding-v4"
+os.environ["OPENAI_EMBEDDING_API_KEY"] = "REDACTED_API_KEY"
+os.environ["OPENAI_EMBEDDING_API_BASE"] = "https://dashscope.aliyuncs.com/compatible-mode/v1/"
+
+DASHSCOPE_EMBEDDER_CONFIG = {
+    "provider": "openai",
+    "config": {
+        "model_name": "text-embedding-v4",
+        "api_key": "REDACTED_API_KEY",
+        "api_base": "https://dashscope.aliyuncs.com/compatible-mode/v1/"
+    }
+}
 
 
 @CrewBase
@@ -29,6 +47,7 @@ class TechReportCrew:
     
     def __init__(self):
         """Initialize: Load knowledge and configure LLM"""
+        self.knowledge_storage = self._create_knowledge_storage()
         self.knowledge_sources = self._load_knowledge()
         self.llm = self._create_llm()
     
@@ -44,9 +63,16 @@ class TechReportCrew:
             base_url=base_url
         )
     
+    def _create_knowledge_storage(self) -> KnowledgeStorage:
+        """
+        Create KnowledgeStorage with DashScope embeddings (OpenAI-compatible).
+        """
+        return KnowledgeStorage(embedder=DASHSCOPE_EMBEDDER_CONFIG)
+    
     def _load_knowledge(self) -> List[StringKnowledgeSource]:
         """
         Load knowledge base from knowledge/ directory
+        Uses custom KnowledgeStorage with ONNX embeddings.
         """
         knowledge_sources = []
         knowledge_dir = Path(__file__).parent.parent.parent / "knowledge"
@@ -62,7 +88,11 @@ class TechReportCrew:
             try:
                 content = md_file.read_text(encoding="utf-8")
                 if content.strip():  # Skip empty files
-                    ks = StringKnowledgeSource(content=content)
+                    # Create knowledge source with custom storage (ONNX embeddings)
+                    ks = StringKnowledgeSource(
+                        content=content,
+                        storage=self.knowledge_storage
+                    )
                     knowledge_sources.append(ks)
                     print(f"[OK] Loaded: {md_file.relative_to(knowledge_dir)}")
             except Exception as e:
@@ -140,8 +170,8 @@ class TechReportCrew:
         
         Configuration:
         - Sequential execution
-        - Memory enabled
-        - Knowledge sources (if available)
+        - Memory disabled (DashScope compatibility)
+        - Knowledge sources enabled (DashScope embeddings)
         """
         return Crew(
             agents=self.agents,
@@ -149,5 +179,6 @@ class TechReportCrew:
             process=Process.sequential,
             verbose=True,
             memory=False,  # Disabled for DashScope compatibility
-            # knowledge_sources=self.knowledge_sources  # Temporarily disabled
+            knowledge_sources=self.knowledge_sources if self.knowledge_sources else None,
+            embedder=DASHSCOPE_EMBEDDER_CONFIG
         )
