@@ -12,6 +12,7 @@
 - 📚 **RAG 知识增强**：内置分析框架（SWOT/PEST/波特五力）和 PPT 设计知识库
 - 📝 **Markdown 报告**：输出结构化、专业的技术报告
 - 🎨 **PPT 结构设计**：自动设计幻灯片结构和内容布局
+- 🌐 **Web UI**：提供友好的 Web 界面
 - 🔧 **易于扩展**：支持自定义 Agent、Task 和知识库
 
 ---
@@ -39,18 +40,32 @@ pip install -e .
 # 复制环境变量模板
 cp .env.example .env
 
-# 编辑 .env，填入你的 OpenAI API Key
-# OPENAI_API_KEY=sk-your-api-key-here
+# 编辑 .env，配置阿里云 DashScope API Key
+# DASHSCOPE_API_KEY=sk-your-api-key-here
+# EMBEDDING_API_KEY=sk-your-embedding-key-here
 ```
+
+**注意**：本项目使用阿里云 DashScope API（GLM-5 模型），需要：
+- `DASHSCOPE_API_KEY` - 用于 LLM 调用（Coding API）
+- `EMBEDDING_API_KEY` - 用于 Embedding（DashScope 兼容 API）
 
 ### 3. 运行
 
+**命令行方式**：
 ```bash
 # 生成技术报告
 insightforge run "分析 OpenAI 在 AI Agent 领域的竞争力"
 
 # 指定输出目录
-insightforge run "2024年大语言模型发展趋势分析" --output ./my_output
+insightforge run "2024年大语言模型发展趋势分析" -o ./my_output
+```
+
+**Web UI 方式**：
+```bash
+# 启动 Web 界面
+python -m src.tech_report_agent.web_ui
+
+# 访问 http://localhost:7860
 ```
 
 ---
@@ -188,9 +203,9 @@ InsightForge/
 ## 📝 开发计划
 
 - [ ] 支持 PDF/Word 报告导出
-- [ ] 集成 Web 搜索工具
+- [x] 集成 Web 搜索工具
 - [ ] 添加数据可视化图表生成
-- [ ] Web UI 界面
+- [x] Web UI 界面
 - [ ] 支持更多 LLM 后端（Claude、DeepSeek等）
 
 ---
