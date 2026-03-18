@@ -3,6 +3,16 @@
 
 analyze_task:
   description: >
+    ## 🌐 输出语言设置
+    
+    {% if language == 'en' -%}
+    **IMPORTANT: Write your entire output in English.**
+    {% else -%}
+    **重要：请使用中文撰写全部输出内容。**
+    {% endif %}
+    
+    ---
+    
     针对"{topic}"主题进行深度分析研究。
     
     ## 🧠 思维链引导
@@ -109,6 +119,16 @@ analyze_task:
 
 design_task:
   description: >
+    ## 🌐 输出语言设置
+    
+    {% if language == 'en' -%}
+    **IMPORTANT: Write slide titles and content in English.**
+    {% else -%}
+    **重要：请使用中文撰写幻灯片标题和内容。**
+    {% endif %}
+    
+    ---
+    
     将技术报告转化为专业的PPT演示文稿结构。
     
     ## 🧠 思维链引导

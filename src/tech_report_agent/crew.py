@@ -112,9 +112,19 @@ class TechReportCrew:
         - Execute deep analysis
         - Write technical report
         """
+        # 尝试加载搜索工具
+        tools = []
+        try:
+            from .tools import get_search_tools
+            tools = get_search_tools()
+            print("[INFO] Search tools loaded")
+        except Exception as e:
+            print(f"[WARN] Failed to load search tools: {e}")
+        
         return Agent(
             config=self.agents_config['technical_analyst'],
             llm=self.llm,
+            tools=tools,  # 添加搜索工具
             verbose=True,
             memory=False,  # Disabled for DashScope compatibility
             allow_delegation=False
