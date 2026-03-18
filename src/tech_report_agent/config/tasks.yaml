@@ -237,7 +237,19 @@ design_task:
     - 必须输出有效的JSON格式
     - 所有字符串必须正确转义引号
     - slide_number 必须连续递增
-    - type 字段必须是有效类型：title/agenda/content/chart/swot/conclusion/end
+    - type 字段必须是有效类型：
+      - title: 封面页
+      - agenda: 目录页
+      - content: 普通内容页
+      - key_findings: 关键发现页
+      - methodology: 方法论页
+      - analysis: 分析页
+      - diagram: 图表页（需要 image 字段）
+      - chart: 数据可视化页（需要 chart_data 字段）
+      - swot: SWOT 分析页
+      - conclusion: 结论页
+      - recommendations: 建议页
+      - closing: 结束页
     
   expected_output: >
     一份详细的PPT结构描述，JSON格式，包含完整的slides数组：
