@@ -4,6 +4,9 @@ Generates .pptx files from JSON structure using python-pptx.
 """
 
 import json
+import tempfile
+import urllib.request
+import urllib.parse
 from pathlib import Path
 from typing import Any
 from pptx import Presentation
@@ -117,9 +120,10 @@ class PPTGenerator:
         "key_findings": "_create_content_slide",
         "methodology": "_create_content_slide",
         "analysis": "_create_content_slide",
-        "diagram": "_create_content_slide",
+        "diagram": "_create_image_slide",  # diagram 使用图片幻灯片
         "chart": "_create_chart_slide",
         "data": "_create_chart_slide",  # data 类型也用图表
+        "image": "_create_image_slide",  # 纯图片幻灯片
         "conclusion": "_create_content_slide",
         "recommendations": "_create_content_slide",
         "closing": "_create_closing_slide",
@@ -463,6 +467,170 @@ class PPTGenerator:
         else:
             plot.data_labels.show_value = True
             plot.data_labels.show_percentage = False
+
+    def _create_image_slide(self, slide_data: dict) -> None:
+        """Create slide with image.
+        
+        Expected slide_data format:
+        {
+            "type": "image",
+            "title": "Image Title",
+            "image": {
+                "path": "/path/to/image.png",  # local path or URL
+                "alt_text": "Image description",
+                "position": "center" | "left" | "right",
+                "width": 6.0,  # optional, in inches
+                "height": 4.0  # optional, in inches
+            },
+            "content": ["Additional bullet points"]  # optional
+        }
+        
+        Or simplified format:
+        {
+            "type": "image",
+            "title": "Image Title",
+            "image": "/path/to/image.png"  # just a path
+        }
+        """
+        slide = self.prs.slides.add_slide(self.prs.slide_layouts[6])  # Blank
+
+        # Add header bar
+        header = slide.shapes.add_shape(
+            MSO_SHAPE.RECTANGLE, 0, 0, self.prs.slide_width, Inches(1.2)
+        )
+        header.fill.solid()
+        header.fill.fore_color.rgb = self.theme["header_bg"]
+        header.line.fill.background()
+
+        # Add title
+        title = slide_data.get("title", "")
+        if title:
+            title_box = slide.shapes.add_textbox(
+                Inches(0.5), Inches(0.25), Inches(12.333), Inches(0.7)
+            )
+            tf = title_box.text_frame
+            p = tf.paragraphs[0]
+            p.text = title
+            p.font.size = Pt(32)
+            p.font.bold = True
+            p.font.color.rgb = self.theme["text_light"]
+
+        # Process image
+        image_data = slide_data.get("image")
+        if image_data:
+            image_path = None
+            
+            # Handle both string path and dict format
+            if isinstance(image_data, str):
+                image_path = image_data
+                alt_text = ""
+                position = "center"
+                width = 8.0
+                height = 4.0
+            else:
+                image_path = image_data.get("path", "")
+                alt_text = image_data.get("alt_text", "")
+                position = image_data.get("position", "center")
+                width = image_data.get("width", 8.0)
+                height = image_data.get("height", 4.0)
+            
+            # Download if URL
+            local_path = self._resolve_image_path(image_path)
+            
+            if local_path and Path(local_path).exists():
+                # Calculate position
+                x = (13.333 - width) / 2  # center horizontally
+                if position == "left":
+                    x = 0.5
+                elif position == "right":
+                    x = 13.333 - width - 0.5
+                
+                y = Inches(1.5)
+                
+                try:
+                    pic = slide.shapes.add_picture(
+                        str(local_path), Inches(x), y, Inches(width), Inches(height)
+                    )
+                    if alt_text:
+                        pic.name = alt_text
+                except Exception as e:
+                    # If image fails, add placeholder text
+                    self._add_image_placeholder(slide, image_path, e)
+
+        # Add bullet points if provided
+        content = slide_data.get("content", [])
+        if content:
+            content_box = slide.shapes.add_textbox(
+                Inches(0.7), Inches(5.8), Inches(11.933), Inches(1.2)
+            )
+            tf = content_box.text_frame
+            tf.word_wrap = True
+
+            for i, item in enumerate(content):
+                if i == 0:
+                    p = tf.paragraphs[0]
+                else:
+                    p = tf.add_paragraph()
+                
+                p.text = "\u2022 " + item
+                p.font.size = Pt(14)
+                p.font.color.rgb = self.theme["text_dark"]
+                p.space_after = Pt(6)
+
+    def _resolve_image_path(self, path: str) -> str | None:
+        """Resolve image path - download if URL, return local path.
+        
+        Args:
+            path: Local path or URL
+            
+        Returns:
+            Local file path or None if failed
+        """
+        if not path:
+            return None
+            
+        # Check if URL
+        if path.startswith(("http://", "https://")):
+            try:
+                # Download to temp file
+                temp_dir = Path(tempfile.gettempdir()) / "insightforge_images"
+                temp_dir.mkdir(parents=True, exist_ok=True)
+                
+                # Create filename from URL
+                parsed = urllib.parse.urlparse(path)
+                filename = Path(parsed.path).stem or "image"
+                ext = Path(parsed.path).suffix or ".png"
+                local_path = temp_dir / f"{filename}{ext}"
+                
+                # Download
+                urllib.request.urlretrieve(path, str(local_path))
+                return str(local_path)
+            except Exception as e:
+                print(f"[WARN] Failed to download image {path}: {e}")
+                return None
+        else:
+            # Local path - check if exists
+            if Path(path).exists():
+                return path
+            return None
+
+    def _add_image_placeholder(self, slide, image_path: str, error: Exception) -> None:
+        """Add placeholder text when image fails to load."""
+        placeholder = slide.shapes.add_textbox(
+            Inches(1), Inches(2.5), Inches(11.333), Inches(2)
+        )
+        tf = placeholder.text_frame
+        p = tf.paragraphs[0]
+        p.text = f"[Image: {image_path}]"
+        p.font.size = Pt(18)
+        p.font.color.rgb = RGBColor(128, 128, 128)
+        p.alignment = PP_ALIGN.CENTER
+        
+        p = tf.add_paragraph()
+        p.text = f"Error: {str(error)}"
+        p.font.size = Pt(12)
+        p.font.color.rgb = RGBColor(192, 192, 192)
+        p.alignment = PP_ALIGN.CENTER
 
 
 def generate_ppt(ppt_structure: dict | str, output_path: str | Path, theme: str = "tech_blue") -> str:
