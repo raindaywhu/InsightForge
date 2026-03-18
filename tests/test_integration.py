@@ -74,16 +74,14 @@ AI Agent 技术前景广阔。
     @pytest.mark.slow
     def test_full_crew_flow_short_topic(self):
         """完整 Crew 流程（简短主题）"""
-        from tech_report_agent.crew import TechReportCrew
-        
-        crew = TechReportCrew()
+        from tech_report_agent.main import run
         
         # 使用简短主题
-        result = crew.run(topic="AI", verbose=True)
+        result = run(topic="AI", verbose=False, output_dir="test_output")
         
         # 验证输出
         assert result is not None
-        assert "report" in result or "ppt" in result
+        assert "report_path" in result or "ppt_structure" in result
 
 
 class TestRAGRetrieval:

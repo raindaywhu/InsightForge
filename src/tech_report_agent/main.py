@@ -167,7 +167,7 @@ def run(topic: str, verbose: bool = True, output_dir: Optional[str] = None, them
             if 'analyze' in task_name.lower():
                 # 保存 Markdown 报告
                 report_path = save_report(content, out_dir, topic)
-                outputs["report"] = str(report_path)
+                outputs["report_path"] = str(report_path)
                 print_progress("SAVED", f"Report: {report_path}")
             elif 'design' in task_name.lower():
                 # 保存 PPT 结构并生成 PPT
@@ -175,7 +175,7 @@ def run(topic: str, verbose: bool = True, output_dir: Optional[str] = None, them
                 outputs["ppt_structure"] = str(ppt_path)
                 print_progress("SAVED", f"PPT Structure: {ppt_path}")
                 if pptx_path:
-                    outputs["pptx"] = str(pptx_path)
+                    outputs["ppt_path"] = str(pptx_path)
                     print_progress("SAVED", f"PPT File: {pptx_path}")
             else:
                 # 其他任务输出

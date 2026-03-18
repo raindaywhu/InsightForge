@@ -63,15 +63,11 @@ class TechReportCrew:
     tasks_config: str = 'config/tasks.yaml'
     
     def __init__(self):
-        """Initialize: Load knowledge by category and configure LLM"""
-        # Knowledge storage with DashScope embeddings
-        self.knowledge_storage = self._create_knowledge_storage()
-        
-        # Load knowledge by category for different agents
-        self.knowledge_by_category = self._load_knowledge_by_category()
-        
-        # Combined knowledge sources for Crew-level config
-        self.knowledge_sources = self._get_all_knowledge_sources()
+        """Initialize: Configure LLM (knowledge disabled for DashScope compatibility)"""
+        # Knowledge storage disabled due to CrewAI + DashScope embedding compatibility
+        # self.knowledge_storage = self._create_knowledge_storage()
+        # self.knowledge_by_category = self._load_knowledge_by_category()
+        # self.knowledge_sources = self._get_all_knowledge_sources()
         
         self.llm = self._create_llm()
     
@@ -168,9 +164,9 @@ class TechReportCrew:
             verbose=True,
             memory=False,
             allow_delegation=False,
-            # Agent-level knowledge: analysis frameworks + report templates
-            knowledge_sources=self.knowledge_by_category.get('analyst', []),
-            embedder=DASHSCOPE_EMBEDDER_CONFIG
+            # Agent-level knowledge: DISABLED due to CrewAI + DashScope embedding compatibility
+            # knowledge_sources=self.knowledge_by_category.get('analyst', []),
+            # embedder=DASHSCOPE_EMBEDDER_CONFIG
         )
     
     @agent
@@ -189,9 +185,9 @@ class TechReportCrew:
             verbose=True,
             memory=False,
             allow_delegation=False,
-            # Agent-level knowledge: PPT design skills
-            knowledge_sources=self.knowledge_by_category.get('designer', []),
-            embedder=DASHSCOPE_EMBEDDER_CONFIG
+            # Agent-level knowledge: DISABLED due to CrewAI + DashScope embedding compatibility
+            # knowledge_sources=self.knowledge_by_category.get('designer', []),
+            # embedder=DASHSCOPE_EMBEDDER_CONFIG
         )
     
     @task
@@ -223,7 +219,7 @@ class TechReportCrew:
             process=Process.sequential,
             verbose=True,
             memory=False,  # Disabled for DashScope compatibility
-            # Crew-level knowledge (backup if agent-level not used)
-            knowledge_sources=self.knowledge_sources if self.knowledge_sources else None,
-            embedder=DASHSCOPE_EMBEDDER_CONFIG
+            # Crew-level knowledge: DISABLED due to CrewAI + DashScope embedding compatibility
+            # knowledge_sources=self.knowledge_sources if self.knowledge_sources else None,
+            # embedder=DASHSCOPE_EMBEDDER_CONFIG
         )
