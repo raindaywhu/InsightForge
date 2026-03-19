@@ -1,6 +1,6 @@
 """
 InsightForge Web UI
-Gradio 界面实现
+Gradio 界面实现 - 支持项目管理与团队协作
 """
 
 import gradio as gr
@@ -8,6 +8,7 @@ import sys
 import os
 from pathlib import Path
 from datetime import datetime
+import json
 
 # 添加项目路径
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -19,34 +20,67 @@ if locale.getpreferredencoding() != 'utf-8':
 
 from src.tech_report_agent.crew import TechReportCrew
 from src.tech_report_agent.ppt_generator import PPTGenerator
+from src.tech_report_agent.project_manager import get_project_manager
 
 # 主题配置
 THEMES = {
     "科技蓝": "tech_blue",
     "商务灰": "business_gray", 
     "简约白": "minimal_white",
-    "自然绿": "nature_green"
+    "自然绿": "nature_green",
+    "珊瑚夕阳": "coral_sunset",
+    "深海蓝": "ocean_depth"
 }
 
-def generate_report(topic: str, theme: str, progress=gr.Progress()):
+# 模板配置
+TEMPLATES = {
+    "技术趋势": "technical",
+    "竞品分析": "competitive",
+    "行业研究": "industry",
+    "技术评估": "evaluation"
+}
+
+# 当前用户（模拟）
+CURRENT_USER = "default"
+
+def generate_report(project_id: str, topic: str, template: str, theme: str, progress=gr.Progress()):
     """
-    生成报告和 PPT
+    生成报告和 PPT（支持项目保存）
     
     Args:
+        project_id: 项目ID（可选）
         topic: 分析主题
+        template: 报告模板
         theme: PPT 主题
         progress: Gradio 进度条
     
     Yields:
-        tuple: (report_content, ppt_path, status)
+        tuple: (report_content, ppt_path, status, new_project_id)
     """
     try:
-        # 初始化
         progress(0, desc="初始化...")
         
         if not topic or not topic.strip():
-            yield "", None, "❌ 请输入分析主题"
+            yield "", None, "❌ 请输入分析主题", None
             return
+        
+        # 获取项目管理器
+        pm = get_project_manager()
+        
+        # 创建或获取项目
+        if not project_id:
+            project = pm.create_project(
+                name=topic[:30],
+                topic=topic,
+                owner=CURRENT_USER,
+                template=TEMPLATES.get(template, "technical")
+            )
+            project_id = project["id"]
+        else:
+            project = pm.get_project(project_id)
+            if not project:
+                yield "", None, "❌ 项目不存在", None
+                return
         
         # 创建输出目录
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -69,7 +103,10 @@ def generate_report(topic: str, theme: str, progress=gr.Progress()):
         # 获取报告内容
         report_content = str(result)
         
-        # 保存报告
+        # 保存报告到项目
+        pm.save_report(project_id, report_content)
+        
+        # 保存报告文件
         report_path = output_dir / f"report_{timestamp}_{safe_topic}.md"
         report_path.write_text(report_content, encoding='utf-8')
         
@@ -78,8 +115,6 @@ def generate_report(topic: str, theme: str, progress=gr.Progress()):
         # 尝试生成 PPT
         ppt_path = None
         try:
-            # 从输出中提取 PPT 结构
-            # 这里简化处理，实际需要从 agent 输出解析
             ppt_generator = PPTGenerator()
             ppt_path = output_dir / f"presentation_{timestamp}_{safe_topic}.pptx"
             
@@ -106,20 +141,95 @@ def generate_report(topic: str, theme: str, progress=gr.Progress()):
         progress(1.0, desc="完成!")
         
         # 返回结果
-        status = f"✅ 完成! 报告已保存到: {report_path.name}"
+        status = f"✅ 完成! 报告已保存到: {report_path.name}\n📁 项目ID: {project_id}"
         if ppt_path:
             status += f"\n📊 PPT 已保存到: {ppt_path.name}"
         
-        yield report_content, str(ppt_path) if ppt_path else None, status
+        yield report_content, str(ppt_path) if ppt_path else None, status, project_id
         
     except Exception as e:
-        yield "", None, f"❌ 错误: {str(e)}"
+        yield "", None, f"❌ 错误: {str(e)}", None
+
+
+def list_projects():
+    """列出当前用户的项目"""
+    pm = get_project_manager()
+    projects = pm.list_projects(owner=CURRENT_USER)
+    
+    if not projects:
+        return "暂无项目"
+    
+    lines = []
+    for p in projects[:10]:  # 最多显示 10 个
+        status_emoji = "✅" if p.get("status") == "completed" else "📝"
+        lines.append(f"{status_emoji} **{p['name']}** (ID: `{p['id']}`)")
+        lines.append(f"   - 主题: {p.get('topic', 'N/A')}")
+        lines.append(f"   - 更新: {p.get('updated_at', 'N/A')[:10]}")
+        lines.append("")
+    
+    return "\n".join(lines)
+
+
+def load_project(project_id: str):
+    """加载项目"""
+    if not project_id or not project_id.strip():
+        return "", "", "请输入项目ID"
+    
+    pm = get_project_manager()
+    project = pm.get_project(project_id.strip())
+    
+    if not project:
+        return "", "", f"❌ 项目 {project_id} 不存在"
+    
+    report = pm.load_report(project_id) or ""
+    
+    return (
+        project.get("topic", ""),
+        report,
+        f"✅ 已加载项目: {project.get('name')} (ID: {project_id})"
+    )
+
+
+def delete_project(project_id: str):
+    """删除项目"""
+    if not project_id or not project_id.strip():
+        return "请输入项目ID"
+    
+    pm = get_project_manager()
+    success = pm.delete_project(project_id.strip())
+    
+    if success:
+        return f"✅ 项目 {project_id} 已删除"
+    else:
+        return f"❌ 删除失败，项目 {project_id} 不存在"
+
+
+def export_project(project_id: str):
+    """导出项目"""
+    if not project_id or not project_id.strip():
+        return None, "请输入项目ID"
+    
+    pm = get_project_manager()
+    export_data = pm.export_project(project_id.strip())
+    
+    if not export_data:
+        return None, f"❌ 项目 {project_id} 不存在"
+    
+    # 保存为 JSON 文件
+    export_path = Path(__file__).parent.parent.parent / "output" / f"export_{project_id}.json"
+    with open(export_path, "w", encoding="utf-8") as f:
+        json.dump(export_data, f, ensure_ascii=False, indent=2)
+    
+    return str(export_path), f"✅ 已导出到: {export_path.name}"
 
 
 def create_ui():
     """创建 Gradio 界面"""
     
-    with gr.Blocks(title="InsightForge") as demo:
+    with gr.Blocks(title="InsightForge", theme=gr.themes.Soft()) as demo:
+        
+        # 状态存储
+        current_project_id = gr.State(value=None)
         
         # 标题
         gr.Markdown(
@@ -132,62 +242,121 @@ def create_ui():
             elem_classes=["main-title"]
         )
         
-        # 主要内容区
-        with gr.Row():
-            # 左侧输入区
-            with gr.Column(scale=1):
-                topic_input = gr.Textbox(
-                    label="分析主题",
-                    placeholder="例如：OpenAI 在 AI Agent 领域的竞争力分析",
-                    lines=3,
-                    info="输入你想分析的主题，系统将自动选择合适的分析框架"
-                )
-                
-                theme_dropdown = gr.Dropdown(
-                    choices=list(THEMES.keys()),
-                    value="科技蓝",
-                    label="PPT 主题",
-                    info="选择 PPT 的配色风格"
-                )
-                
-                generate_btn = gr.Button(
-                    "🚀 开始生成",
-                    variant="primary",
-                    size="lg"
-                )
-                
-                status_output = gr.Textbox(
-                    label="状态",
-                    lines=2,
-                    interactive=False,
-                    elem_classes=["status-box"]
-                )
+        # 使用 Tab 组织功能
+        with gr.Tabs():
+            # Tab 1: 生成报告
+            with gr.TabItem("📝 生成报告"):
+                with gr.Row():
+                    # 左侧输入区
+                    with gr.Column(scale=1):
+                        topic_input = gr.Textbox(
+                            label="分析主题",
+                            placeholder="例如：OpenAI 在 AI Agent 领域的竞争力分析",
+                            lines=3,
+                            info="输入你想分析的主题，系统将自动选择合适的分析框架"
+                        )
+                        
+                        template_dropdown = gr.Dropdown(
+                            choices=list(TEMPLATES.keys()),
+                            value="技术趋势",
+                            label="报告模板",
+                            info="选择报告类型"
+                        )
+                        
+                        theme_dropdown = gr.Dropdown(
+                            choices=list(THEMES.keys()),
+                            value="科技蓝",
+                            label="PPT 主题",
+                            info="选择演示文稿视觉风格"
+                        )
+                        
+                        generate_btn = gr.Button(
+                            "🚀 开始分析",
+                            variant="primary",
+                            size="lg"
+                        )
+                    
+                    # 右侧输出区
+                    with gr.Column(scale=2):
+                        status_output = gr.Textbox(
+                            label="状态",
+                            lines=2,
+                            interactive=False
+                        )
+                        
+                        report_output = gr.Textbox(
+                            label="分析报告",
+                            lines=15,
+                            max_lines=30,
+                            interactive=False,
+                            show_copy_button=True
+                        )
+                        
+                        ppt_output = gr.File(
+                            label="PPT 文件",
+                            file_count="single"
+                        )
             
-            # 右侧输出区
-            with gr.Column(scale=2):
-                with gr.Tab("📄 报告预览"):
-                    report_output = gr.Markdown(
-                        label="生成报告",
-                        value="报告将在这里显示..."
+            # Tab 2: 项目管理
+            with gr.TabItem("📁 项目管理"):
+                gr.Markdown("### 我的项目")
+                
+                project_list = gr.Textbox(
+                    label="项目列表",
+                    lines=10,
+                    interactive=False,
+                    value=list_projects()
+                )
+                
+                refresh_btn = gr.Button("🔄 刷新列表")
+                refresh_btn.click(fn=list_projects, outputs=project_list)
+                
+                gr.Markdown("---")
+                gr.Markdown("### 项目操作")
+                
+                with gr.Row():
+                    project_id_input = gr.Textbox(
+                        label="项目ID",
+                        placeholder="输入项目ID进行操作"
                     )
                 
-                with gr.Tab("📊 PPT 下载"):
-                    ppt_output = gr.File(
-                        label="PPT 文件",
-                        file_types=[".pptx"]
-                    )
+                with gr.Row():
+                    load_btn = gr.Button("📂 加载项目")
+                    export_btn = gr.Button("📤 导出项目")
+                    delete_btn = gr.Button("🗑️ 删除项目", variant="stop")
+                
+                project_status = gr.Textbox(label="操作结果", interactive=False)
+                export_file = gr.File(label="导出文件")
+                
+                # 事件绑定
+                load_btn.click(
+                    fn=load_project,
+                    inputs=[project_id_input],
+                    outputs=[topic_input, report_output, project_status]
+                )
+                
+                export_btn.click(
+                    fn=export_project,
+                    inputs=[project_id_input],
+                    outputs=[export_file, project_status]
+                )
+                
+                delete_btn.click(
+                    fn=delete_project,
+                    inputs=[project_id_input],
+                    outputs=[project_status]
+                )
         
         # 示例
-        gr.Markdown("### 📝 示例主题")
         gr.Examples(
             examples=[
-                ["OpenAI 在 AI Agent 领域的竞争力分析"],
+                ["GPT-5 技术发展预测"],
                 ["中国新能源汽车市场 SWOT 分析"],
                 ["大模型技术发展趋势 PEST 分析"],
                 ["苹果公司 AI 战略分析"],
             ],
             inputs=topic_input,
-            label=""
+            label="示例主题"
         )
         
         # 底部信息
@@ -198,14 +367,15 @@ def create_ui():
             - 分析时间约 2-5 分钟，取决于主题复杂度
             - 支持的分析框架：SWOT、PEST、波特五力等
             - 输出包含 Markdown 报告和 PPT 文件
+            - 所有项目自动保存，可在"项目管理"中查看
             """
         )
         
         # 事件绑定
         generate_btn.click(
             fn=generate_report,
-            inputs=[topic_input, theme_dropdown],
-            outputs=[report_output, ppt_output, status_output]
+            inputs=[current_project_id, topic_input, template_dropdown, theme_dropdown],
+            outputs=[report_output, ppt_output, status_output, current_project_id]
         )
     
     return demo
