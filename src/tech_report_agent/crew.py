@@ -6,6 +6,11 @@ Defines Agent, Task and Crew, manages knowledge loading.
 RAG Knowledge Architecture:
 - technical_analyst: academic_analysis + report_templates (analysis frameworks)
 - presentation_designer: ppt_skills (design principles, chart types, color guides)
+
+Agent Collaboration (Hierarchical):
+- report_manager: 协调分析师和设计师，评审质量，请求补充
+- technical_analyst: 深度分析，输出报告
+- presentation_designer: 设计 PPT，呈现洞察
 """
 
 import os
@@ -49,9 +54,15 @@ class TechReportCrew:
     """
     Tech Report Generation Crew
     
-    Two agents collaborate with dedicated knowledge sources:
-    1. Technical Analyst - Uses analysis frameworks (SWOT, PEST, Porter's, etc.)
-    2. Presentation Designer - Uses PPT design principles
+    Three agents collaborate with dedicated knowledge sources:
+    1. Report Manager - Coordinates workflow, reviews quality, requests revisions
+    2. Technical Analyst - Uses analysis frameworks (SWOT, PEST, Porter's, etc.)
+    3. Presentation Designer - Uses PPT design principles
+    
+    Collaboration Mode: Hierarchical Process
+    - Manager assigns tasks and reviews output
+    - Can request analyst to supplement information
+    - Iterates until quality standard is met
     
     RAG Knowledge Categories:
     - academic_analysis/ → Technical Analyst (analysis frameworks)
@@ -139,6 +150,27 @@ class TechReportCrew:
         return all_sources
     
     @agent
+    def report_manager(self) -> Agent:
+        """
+        Report Manager Agent
+        
+        Role: Coordinates analyst and designer, reviews quality, requests revisions
+        
+        Capabilities:
+        - Task assignment and coordination
+        - Quality review and feedback
+        - Request analyst to supplement information
+        - Final quality gate
+        """
+        return Agent(
+            config=self.agents_config['report_manager'],
+            llm=self.llm,
+            verbose=True,
+            memory=False,
+            allow_delegation=True,  # Can delegate to analyst and designer
+        )
+    
+    @agent
     def technical_analyst(self) -> Agent:
         """
         Technical Analyst Agent
@@ -207,7 +239,14 @@ class TechReportCrew:
     @crew
     def crew(self) -> Crew:
         """
-        Assemble Crew with RAG knowledge enabled.
+        Assemble Crew with Hierarchical Process for better collaboration.
+        
+        Manager coordinates:
+        1. Assigns analysis task to Technical Analyst
+        2. Reviews report quality, requests revisions if needed
+        3. Assigns design task to Presentation Designer
+        4. Reviews PPT quality, ensures key info is preserved
+        5. Final quality gate before delivery
         
         Each agent has dedicated knowledge sources:
         - Technical Analyst: analysis frameworks + report templates
@@ -216,7 +255,8 @@ class TechReportCrew:
         return Crew(
             agents=self.agents,
             tasks=self.tasks,
-            process=Process.sequential,
+            process=Process.hierarchical,  # Manager coordinates collaboration
+            manager_llm=self.llm,  # Manager uses same LLM
             verbose=True,
             memory=False,  # Disabled for DashScope compatibility
             # Crew-level knowledge
