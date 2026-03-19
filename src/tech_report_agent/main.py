@@ -119,7 +119,7 @@ def save_ppt_structure(json_content: str, output_dir: Path, topic: str, theme: s
     return filepath, pptx_path
 
 
-def run(topic: str, verbose: bool = True, output_dir: Optional[str] = None, theme: str = "tech_blue", language: str = "zh") -> dict:
+def run(topic: str, verbose: bool = True, output_dir: Optional[str] = None, theme: str = "tech_blue", template: str = "technical", language: str = "zh") -> dict:
     """
     执行技术报告生成流程
     
@@ -127,7 +127,8 @@ def run(topic: str, verbose: bool = True, output_dir: Optional[str] = None, them
         topic: 分析主题
         verbose: 是否输出详细日志
         output_dir: 输出目录路径
-        theme: PPT 主题 (tech_blue, business_gray, minimal_white, nature_green)
+        theme: PPT 主题 (tech_blue, business_gray, minimal_white, nature_green, coral_sunset, ocean_depth)
+        template: 报告模板 (technical, competitive, industry, evaluation)
         language: 输出语言 (zh, en)
         
     Returns:
@@ -137,7 +138,7 @@ def run(topic: str, verbose: bool = True, output_dir: Optional[str] = None, them
     print("  InsightForge - AI Report Generator")
     print("="*60)
     print_progress("START", f"Topic: {topic}")
-    print_progress("CONFIG", f"Language: {'中文' if language == 'zh' else 'English'}")
+    print_progress("CONFIG", f"Template: {template} | Language: {'中文' if language == 'zh' else 'English'}")
     
     # 设置输出目录
     if output_dir:
@@ -149,7 +150,7 @@ def run(topic: str, verbose: bool = True, output_dir: Optional[str] = None, them
     
     # 执行
     print_progress("RUN", "Running analysis crew...")
-    inputs = {"topic": topic, "language": language}
+    inputs = {"topic": topic, "template": template, "language": language}
     
     try:
         result = crew.crew().kickoff(inputs=inputs)
@@ -221,9 +222,13 @@ Examples:
     run_parser.add_argument("topic", help="Analysis topic")
     run_parser.add_argument("--output", "-o", help="Output directory", default="output")
     run_parser.add_argument("--theme", "-t", 
-                            choices=["tech_blue", "business_gray", "minimal_white", "nature_green"],
+                            choices=["tech_blue", "business_gray", "minimal_white", "nature_green", "coral_sunset", "ocean_depth"],
                             default="tech_blue",
                             help="PPT theme (default: tech_blue)")
+    run_parser.add_argument("--template", "-tp",
+                            choices=["technical", "competitive", "industry", "evaluation"],
+                            default="technical",
+                            help="Report template: technical, competitive, industry, evaluation (default: technical)")
     run_parser.add_argument("--language", "-l",
                             choices=["zh", "en"],
                             default="zh",
@@ -233,7 +238,7 @@ Examples:
     args = parser.parse_args()
     
     if args.command == "run":
-        run(topic=args.topic, verbose=not args.quiet, output_dir=args.output, theme=args.theme, language=args.language)
+        run(topic=args.topic, verbose=not args.quiet, output_dir=args.output, theme=args.theme, template=args.template, language=args.language)
     else:
         parser.print_help()
 
