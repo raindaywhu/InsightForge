@@ -76,37 +76,85 @@ THEMES = {
         "name": "科技蓝",
         "title_bg": RGBColor(26, 26, 46),      # Deep navy
         "accent": RGBColor(233, 69, 96),       # Coral red
+        "accent2": RGBColor(52, 152, 219),     # Light blue
         "text_light": RGBColor(255, 255, 255),  # White
         "text_dark": RGBColor(51, 51, 51),      # Dark gray
         "content_bg": RGBColor(248, 249, 250),  # Light gray
         "header_bg": RGBColor(52, 73, 94),      # Steel blue
+        "gradient_start": RGBColor(26, 26, 46),  # For gradient
+        "gradient_end": RGBColor(44, 62, 80),
+        "card_bg": RGBColor(255, 255, 255),    # Card background
+        "border": RGBColor(220, 220, 220),     # Border color
     },
     "business_gray": {
         "name": "商务灰",
         "title_bg": RGBColor(45, 52, 54),       # Charcoal
         "accent": RGBColor(0, 184, 148),        # Teal
+        "accent2": RGBColor(116, 185, 255),     # Light blue
         "text_light": RGBColor(255, 255, 255),
         "text_dark": RGBColor(45, 52, 54),
         "content_bg": RGBColor(245, 246, 250),
         "header_bg": RGBColor(99, 110, 114),
+        "gradient_start": RGBColor(45, 52, 54),
+        "gradient_end": RGBColor(72, 84, 96),
+        "card_bg": RGBColor(255, 255, 255),
+        "border": RGBColor(220, 220, 220),
     },
     "minimal_white": {
         "name": "简约白",
         "title_bg": RGBColor(255, 255, 255),    # White
         "accent": RGBColor(0, 123, 255),         # Blue
+        "accent2": RGBColor(108, 117, 125),     # Gray
         "text_light": RGBColor(51, 51, 51),      # Dark for white bg
         "text_dark": RGBColor(51, 51, 51),
         "content_bg": RGBColor(255, 255, 255),
         "header_bg": RGBColor(240, 240, 240),
+        "gradient_start": RGBColor(240, 240, 240),
+        "gradient_end": RGBColor(255, 255, 255),
+        "card_bg": RGBColor(250, 250, 250),
+        "border": RGBColor(230, 230, 230),
     },
     "nature_green": {
         "name": "自然绿",
         "title_bg": RGBColor(39, 174, 96),       # Green
         "accent": RGBColor(243, 156, 18),        # Orange
+        "accent2": RGBColor(46, 204, 113),       # Light green
         "text_light": RGBColor(255, 255, 255),
         "text_dark": RGBColor(45, 52, 54),
         "content_bg": RGBColor(245, 250, 245),
         "header_bg": RGBColor(46, 204, 113),
+        "gradient_start": RGBColor(39, 174, 96),
+        "gradient_end": RGBColor(46, 204, 113),
+        "card_bg": RGBColor(255, 255, 255),
+        "border": RGBColor(220, 230, 220),
+    },
+    "coral_sunset": {
+        "name": "珊瑚夕阳",
+        "title_bg": RGBColor(233, 69, 96),       # Coral
+        "accent": RGBColor(255, 255, 255),       # White
+        "accent2": RGBColor(255, 159, 67),       # Orange
+        "text_light": RGBColor(255, 255, 255),
+        "text_dark": RGBColor(51, 51, 51),
+        "content_bg": RGBColor(255, 245, 245),
+        "header_bg": RGBColor(214, 48, 71),
+        "gradient_start": RGBColor(233, 69, 96),
+        "gradient_end": RGBColor(255, 159, 67),
+        "card_bg": RGBColor(255, 255, 255),
+        "border": RGBColor(255, 220, 220),
+    },
+    "ocean_depth": {
+        "name": "深海蓝",
+        "title_bg": RGBColor(12, 35, 64),        # Deep ocean
+        "accent": RGBColor(0, 210, 211),         # Cyan
+        "accent2": RGBColor(72, 202, 228),       # Light cyan
+        "text_light": RGBColor(255, 255, 255),
+        "text_dark": RGBColor(51, 51, 51),
+        "content_bg": RGBColor(240, 248, 255),
+        "header_bg": RGBColor(20, 60, 90),
+        "gradient_start": RGBColor(12, 35, 64),
+        "gradient_end": RGBColor(20, 60, 100),
+        "card_bg": RGBColor(255, 255, 255),
+        "border": RGBColor(200, 220, 240),
     },
 }
 
@@ -127,6 +175,7 @@ class PPTGenerator:
         "conclusion": "_create_content_slide",
         "recommendations": "_create_content_slide",
         "closing": "_create_closing_slide",
+        "timeline": "_create_timeline_slide",  # 新增时间线
     }
 
     def __init__(self, theme: str = "tech_blue"):
@@ -201,7 +250,7 @@ class PPTGenerator:
         method(slide_data)
 
     def _create_title_slide(self, slide_data: dict) -> None:
-        """Create title slide (cover page)."""
+        """Create title slide (cover page) with enhanced visual design."""
         slide = self.prs.slides.add_slide(self.prs.slide_layouts[6])  # Blank
 
         # Add background shape
@@ -212,46 +261,87 @@ class PPTGenerator:
         shape.fill.fore_color.rgb = self.theme["title_bg"]
         shape.line.fill.background()
 
+        # Add decorative accent bar at bottom
+        accent_bar = slide.shapes.add_shape(
+            MSO_SHAPE.RECTANGLE, 0, Inches(6.8), self.prs.slide_width, Inches(0.7)
+        )
+        accent_bar.fill.solid()
+        accent_bar.fill.fore_color.rgb = self.theme["accent"]
+        accent_bar.line.fill.background()
+
+        # Add decorative circle (top right)
+        circle = slide.shapes.add_shape(
+            MSO_SHAPE.OVAL, Inches(10.5), Inches(-0.5), Inches(3), Inches(3)
+        )
+        circle.fill.solid()
+        circle.fill.fore_color.rgb = self.theme["accent2"]
+        # Set transparency by adjusting alpha
+        try:
+            fill = circle.fill
+            fill.solid()
+            # Add slight transparency effect by using a lighter shade
+        except:
+            pass
+        circle.line.fill.background()
+
+        # Add decorative line (left side)
+        line = slide.shapes.add_shape(
+            MSO_SHAPE.RECTANGLE, Inches(0.3), Inches(2.8), Inches(0.08), Inches(1.5)
+        )
+        line.fill.solid()
+        line.fill.fore_color.rgb = self.theme["accent"]
+        line.line.fill.background()
+
         # Add title
         content = slide_data.get("content", [])
         if content:
             title_box = slide.shapes.add_textbox(
-                Inches(0.5), Inches(2.5), Inches(12.333), Inches(1.5)
+                Inches(0.8), Inches(2.5), Inches(11.0), Inches(1.5)
             )
             tf = title_box.text_frame
             tf.word_wrap = True
             p = tf.paragraphs[0]
             p.text = content[0]
-            p.font.size = Pt(44)
+            p.font.size = Pt(48)
             p.font.bold = True
             p.font.color.rgb = self.theme["text_light"]
-            p.alignment = PP_ALIGN.CENTER
+            p.alignment = PP_ALIGN.LEFT
 
             # Subtitle
             if len(content) > 1:
                 p = tf.add_paragraph()
                 p.text = content[1]
                 p.font.size = Pt(24)
-                p.font.color.rgb = self.theme["text_light"]
-                p.alignment = PP_ALIGN.CENTER
+                p.font.color.rgb = self.theme["accent2"]
+                p.alignment = PP_ALIGN.LEFT
+                p.space_before = Pt(16)
 
-            # Footer
+            # Footer / Date
             if len(content) > 2:
                 footer_box = slide.shapes.add_textbox(
-                    Inches(0.5), Inches(6), Inches(12.333), Inches(0.5)
+                    Inches(0.8), Inches(6.2), Inches(11.0), Inches(0.5)
                 )
                 tf = footer_box.text_frame
                 p = tf.paragraphs[0]
                 p.text = content[2]
-                p.font.size = Pt(14)
+                p.font.size = Pt(16)
                 p.font.color.rgb = self.theme["text_light"]
-                p.alignment = PP_ALIGN.CENTER
+                p.alignment = PP_ALIGN.LEFT
 
     def _create_content_slide(self, slide_data: dict) -> None:
-        """Create content slide with title and bullet points."""
+        """Create content slide with enhanced visual design.
+        
+        Supports layouts:
+        - default: header + bullet points
+        - cards: content displayed as cards
+        - two_column: two-column layout
+        """
         slide = self.prs.slides.add_slide(self.prs.slide_layouts[6])  # Blank
 
-        # Add header bar
+        # Check for layout type
+        layout = slide_data.get("layout", "default")
+        
+        # Add header bar with accent line
         header = slide.shapes.add_shape(
             MSO_SHAPE.RECTANGLE, 0, 0, self.prs.slide_width, Inches(1.2)
         )
@@ -259,7 +349,15 @@ class PPTGenerator:
         header.fill.fore_color.rgb = self.theme["header_bg"]
         header.line.fill.background()
 
-        # Add title
+        # Add accent line below header
+        accent_line = slide.shapes.add_shape(
+            MSO_SHAPE.RECTANGLE, 0, Inches(1.2), self.prs.slide_width, Inches(0.05)
+        )
+        accent_line.fill.solid()
+        accent_line.fill.fore_color.rgb = self.theme["accent"]
+        accent_line.line.fill.background()
+
+        # Add title with icon placeholder
         title = slide_data.get("title", "")
         if title:
             title_box = slide.shapes.add_textbox(
@@ -272,26 +370,13 @@ class PPTGenerator:
             p.font.bold = True
             p.font.color.rgb = self.theme["text_light"]
 
-        # Add content
-        content = slide_data.get("content", [])
-        if content:
-            content_box = slide.shapes.add_textbox(
-                Inches(0.7), Inches(1.5), Inches(11.933), Inches(5.5)
-            )
-            tf = content_box.text_frame
-            tf.word_wrap = True
-
-            for i, item in enumerate(content):
-                if i == 0:
-                    p = tf.paragraphs[0]
-                else:
-                    p = tf.add_paragraph()
-                
-                p.text = "\u2022 " + item
-                p.font.size = Pt(20)
-                p.font.color.rgb = self.theme["text_dark"]
-                p.space_after = Pt(12)
-                p.level = 0
+        # Route to specific layout
+        if layout == "cards":
+            self._create_cards_layout(slide, slide_data)
+        elif layout == "two_column":
+            self._create_two_column_layout(slide, slide_data)
+        else:
+            self._create_default_layout(slide, slide_data)
 
         # Add slide number
         slide_num = slide_data.get("slide_number", "")
@@ -306,8 +391,305 @@ class PPTGenerator:
             p.font.color.rgb = self.theme["text_dark"]
             p.alignment = PP_ALIGN.RIGHT
 
+    def _create_default_layout(self, slide, slide_data: dict) -> None:
+        """Create default bullet point layout with enhanced styling."""
+        content = slide_data.get("content", [])
+        if content:
+            content_box = slide.shapes.add_textbox(
+                Inches(0.7), Inches(1.6), Inches(11.933), Inches(5.5)
+            )
+            tf = content_box.text_frame
+            tf.word_wrap = True
+
+            for i, item in enumerate(content):
+                if i == 0:
+                    p = tf.paragraphs[0]
+                else:
+                    p = tf.add_paragraph()
+                
+                # Enhanced bullet styling
+                p.text = "●  " + item
+                p.font.size = Pt(20)
+                p.font.color.rgb = self.theme["text_dark"]
+                p.space_after = Pt(16)
+                p.level = 0
+
+    def _create_cards_layout(self, slide, slide_data: dict) -> None:
+        """Create card-style layout for content.
+        
+        Expected format:
+        {
+            "layout": "cards",
+            "cards": [
+                {"title": "Card 1", "content": "Description"},
+                {"title": "Card 2", "content": "Description"},
+            ]
+        }
+        """
+        cards = slide_data.get("cards", slide_data.get("content", []))
+        
+        if not cards:
+            return
+            
+        # Determine card layout (2 or 3 columns)
+        num_cards = len(cards)
+        if num_cards <= 2:
+            cols = 2
+            card_width = 5.5
+            card_height = 2.5
+        else:
+            cols = 3
+            card_width = 3.8
+            card_height = 2.5
+            
+        spacing = 0.5
+        start_x = (13.333 - (cols * card_width + (cols - 1) * spacing)) / 2
+        
+        for i, card in enumerate(cards):
+            if isinstance(card, str):
+                card_title = ""
+                card_content = card
+            else:
+                card_title = card.get("title", "")
+                card_content = card.get("content", "")
+            
+            row = i // cols
+            col = i % cols
+            
+            x = start_x + col * (card_width + spacing)
+            y = 1.8 + row * (card_height + 0.3)
+            
+            # Create card background
+            card_shape = slide.shapes.add_shape(
+                MSO_SHAPE.ROUNDED_RECTANGLE, Inches(x), Inches(y), 
+                Inches(card_width), Inches(card_height)
+            )
+            card_shape.fill.solid()
+            card_shape.fill.fore_color.rgb = self.theme["card_bg"]
+            card_shape.line.color.rgb = self.theme["border"]
+            card_shape.line.width = Pt(1)
+            
+            # Add accent bar at top of card
+            accent = slide.shapes.add_shape(
+                MSO_SHAPE.RECTANGLE, Inches(x), Inches(y),
+                Inches(card_width), Inches(0.08)
+            )
+            accent.fill.solid()
+            accent.fill.fore_color.rgb = self.theme["accent"]
+            accent.line.fill.background()
+            
+            # Add card title
+            if card_title:
+                title_box = slide.shapes.add_textbox(
+                    Inches(x + 0.2), Inches(y + 0.25),
+                    Inches(card_width - 0.4), Inches(0.5)
+                )
+                tf = title_box.text_frame
+                p = tf.paragraphs[0]
+                p.text = card_title
+                p.font.size = Pt(16)
+                p.font.bold = True
+                p.font.color.rgb = self.theme["accent"]
+            
+            # Add card content
+            content_y = y + 0.25 + (0.5 if card_title else 0)
+            content_height = card_height - 0.5 - (0.5 if card_title else 0)
+            
+            content_box = slide.shapes.add_textbox(
+                Inches(x + 0.2), Inches(content_y),
+                Inches(card_width - 0.4), Inches(content_height)
+            )
+            tf = content_box.text_frame
+            tf.word_wrap = True
+            p = tf.paragraphs[0]
+            p.text = card_content
+            p.font.size = Pt(14)
+            p.font.color.rgb = self.theme["text_dark"]
+
+    def _create_two_column_layout(self, slide, slide_data: dict) -> None:
+        """Create two-column layout.
+        
+        Expected format:
+        {
+            "layout": "two_column",
+            "left": {"title": "...", "content": [...]},
+            "right": {"title": "...", "content": [...]}
+        }
+        """
+        left = slide_data.get("left", {})
+        right = slide_data.get("right", {})
+        
+        # Left column
+        if left:
+            self._create_column(slide, left, 0.5, 1.6, 5.8)
+            
+        # Right column
+        if right:
+            self._create_column(slide, right, 6.8, 1.6, 5.8)
+            
+        # Add vertical divider
+        divider = slide.shapes.add_shape(
+            MSO_SHAPE.RECTANGLE, Inches(6.4), Inches(1.8),
+            Inches(0.03), Inches(5.0)
+        )
+        divider.fill.solid()
+        divider.fill.fore_color.rgb = self.theme["border"]
+        divider.line.fill.background()
+
+    def _create_column(self, slide, col_data: dict, x: float, y: float, width: float) -> None:
+        """Create a single column with optional title and content."""
+        title = col_data.get("title", "")
+        content = col_data.get("content", [])
+        
+        current_y = y
+        
+        # Add column title
+        if title:
+            title_box = slide.shapes.add_textbox(
+                Inches(x), Inches(current_y), Inches(width), Inches(0.5)
+            )
+            tf = title_box.text_frame
+            p = tf.paragraphs[0]
+            p.text = title
+            p.font.size = Pt(20)
+            p.font.bold = True
+            p.font.color.rgb = self.theme["accent"]
+            current_y += 0.6
+        
+        # Add content
+        if content:
+            content_box = slide.shapes.add_textbox(
+                Inches(x), Inches(current_y), Inches(width), Inches(4.5)
+            )
+            tf = content_box.text_frame
+            tf.word_wrap = True
+            
+            for i, item in enumerate(content):
+                if i == 0:
+                    p = tf.paragraphs[0]
+                else:
+                    p = tf.add_paragraph()
+                
+                p.text = "●  " + item
+                p.font.size = Pt(16)
+                p.font.color.rgb = self.theme["text_dark"]
+                p.space_after = Pt(10)
+
+    def _create_timeline_slide(self, slide_data: dict) -> None:
+        """Create timeline slide.
+        
+        Expected format:
+        {
+            "type": "timeline",
+            "title": "Timeline",
+            "items": [
+                {"date": "2024 Q1", "title": "Event 1", "description": "..."},
+                {"date": "2024 Q2", "title": "Event 2", "description": "..."},
+            ]
+        }
+        """
+        slide = self.prs.slides.add_slide(self.prs.slide_layouts[6])  # Blank
+
+        # Add header bar
+        header = slide.shapes.add_shape(
+            MSO_SHAPE.RECTANGLE, 0, 0, self.prs.slide_width, Inches(1.2)
+        )
+        header.fill.solid()
+        header.fill.fore_color.rgb = self.theme["header_bg"]
+        header.line.fill.background()
+
+        # Add accent line
+        accent_line = slide.shapes.add_shape(
+            MSO_SHAPE.RECTANGLE, 0, Inches(1.2), self.prs.slide_width, Inches(0.05)
+        )
+        accent_line.fill.solid()
+        accent_line.fill.fore_color.rgb = self.theme["accent"]
+        accent_line.line.fill.background()
+
+        # Add title
+        title = slide_data.get("title", "")
+        if title:
+            title_box = slide.shapes.add_textbox(
+                Inches(0.5), Inches(0.25), Inches(12.333), Inches(0.7)
+            )
+            tf = title_box.text_frame
+            p = tf.paragraphs[0]
+            p.text = title
+            p.font.size = Pt(32)
+            p.font.bold = True
+            p.font.color.rgb = self.theme["text_light"]
+
+        # Add timeline
+        items = slide_data.get("items", [])
+        if items:
+            # Draw timeline line
+            line_y = 3.5
+            timeline_line = slide.shapes.add_shape(
+                MSO_SHAPE.RECTANGLE, Inches(1), Inches(line_y),
+                Inches(11.333), Inches(0.05)
+            )
+            timeline_line.fill.solid()
+            timeline_line.fill.fore_color.rgb = self.theme["border"]
+            timeline_line.line.fill.background()
+
+            # Add items
+            num_items = len(items)
+            spacing = 11.333 / max(num_items, 1)
+            
+            for i, item in enumerate(items):
+                x = 1 + i * spacing + spacing / 2
+                
+                # Add circle marker
+                circle = slide.shapes.add_shape(
+                    MSO_SHAPE.OVAL, Inches(x - 0.15), Inches(line_y - 0.15),
+                    Inches(0.35), Inches(0.35)
+                )
+                circle.fill.solid()
+                circle.fill.fore_color.rgb = self.theme["accent"]
+                circle.line.fill.background()
+                
+                # Add date above line
+                date = item.get("date", "")
+                if date:
+                    date_box = slide.shapes.add_textbox(
+                        Inches(x - 0.8), Inches(line_y - 0.7),
+                        Inches(1.6), Inches(0.4)
+                    )
+                    tf = date_box.text_frame
+                    p = tf.paragraphs[0]
+                    p.text = date
+                    p.font.size = Pt(12)
+                    p.font.bold = True
+                    p.font.color.rgb = self.theme["accent"]
+                    p.alignment = PP_ALIGN.CENTER
+                
+                # Add title and description below line
+                item_title = item.get("title", "")
+                item_desc = item.get("description", "")
+                
+                text_box = slide.shapes.add_textbox(
+                    Inches(x - 0.8), Inches(line_y + 0.4),
+                    Inches(1.6), Inches(1.5)
+                )
+                tf = text_box.text_frame
+                tf.word_wrap = True
+                
+                p = tf.paragraphs[0]
+                p.text = item_title
+                p.font.size = Pt(11)
+                p.font.bold = True
+                p.font.color.rgb = self.theme["text_dark"]
+                p.alignment = PP_ALIGN.CENTER
+                
+                if item_desc:
+                    p = tf.add_paragraph()
+                    p.text = item_desc
+                    p.font.size = Pt(9)
+                    p.font.color.rgb = self.theme["text_dark"]
+                    p.alignment = PP_ALIGN.CENTER
+
     def _create_closing_slide(self, slide_data: dict) -> None:
-        """Create closing slide (thank you page)."""
+        """Create closing slide (thank you page) with enhanced design."""
         slide = self.prs.slides.add_slide(self.prs.slide_layouts[6])  # Blank
 
         # Add background
@@ -318,7 +700,31 @@ class PPTGenerator:
         shape.fill.fore_color.rgb = self.theme["title_bg"]
         shape.line.fill.background()
 
-        # Add thank you text
+        # Add decorative elements
+        # Top right circle
+        circle1 = slide.shapes.add_shape(
+            MSO_SHAPE.OVAL, Inches(10.5), Inches(-0.5), Inches(3), Inches(3)
+        )
+        circle1.fill.solid()
+        circle1.fill.fore_color.rgb = self.theme["accent2"]
+        circle1.line.fill.background()
+
+        # Bottom left circle
+        circle2 = slide.shapes.add_shape(
+            MSO_SHAPE.OVAL, Inches(-1), Inches(5), Inches(3), Inches(3)
+        )
+        circle2.fill.solid()
+        circle2.fill.fore_color.rgb = self.theme["accent"]
+        circle2.line.fill.background()
+
+        # Add thank you text with accent line
+        line = slide.shapes.add_shape(
+            MSO_SHAPE.RECTANGLE, Inches(5.5), Inches(2.3), Inches(2.333), Inches(0.05)
+        )
+        line.fill.solid()
+        line.fill.fore_color.rgb = self.theme["accent"]
+        line.line.fill.background()
+
         thank_box = slide.shapes.add_textbox(
             Inches(0.5), Inches(2.5), Inches(12.333), Inches(2)
         )
@@ -334,7 +740,7 @@ class PPTGenerator:
         content = slide_data.get("content", [])
         if content:
             contact_box = slide.shapes.add_textbox(
-                Inches(0.5), Inches(4.5), Inches(12.333), Inches(1)
+                Inches(0.5), Inches(4.5), Inches(12.333), Inches(1.5)
             )
             tf = contact_box.text_frame
             for i, item in enumerate(content):
@@ -346,6 +752,7 @@ class PPTGenerator:
                 p.font.size = Pt(18)
                 p.font.color.rgb = self.theme["text_light"]
                 p.alignment = PP_ALIGN.CENTER
+                p.space_after = Pt(8)
 
     def _create_chart_slide(self, slide_data: dict) -> None:
         """Create slide with chart visualization.
