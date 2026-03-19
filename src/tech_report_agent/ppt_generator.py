@@ -171,6 +171,8 @@ class PPTGenerator:
         "diagram": "_create_image_slide",  # diagram 使用图片幻灯片
         "chart": "_create_chart_slide",
         "data": "_create_chart_slide",  # data 类型也用图表
+        "swot": "_create_swot_slide",  # SWOT 矩阵图
+        "tech_curve": "_create_tech_curve_slide",  # 技术曲线
         "image": "_create_image_slide",  # 纯图片幻灯片
         "conclusion": "_create_content_slide",
         "recommendations": "_create_content_slide",
@@ -874,6 +876,341 @@ class PPTGenerator:
         else:
             plot.data_labels.show_value = True
             plot.data_labels.show_percentage = False
+
+    def _create_swot_slide(self, slide_data: dict) -> None:
+        """Create SWOT matrix visualization.
+        
+        Expected slide_data format:
+        {
+            "type": "swot",
+            "title": "SWOT Analysis",
+            "strengths": ["Item 1", "Item 2", ...],
+            "weaknesses": ["Item 1", "Item 2", ...],
+            "opportunities": ["Item 1", "Item 2", ...],
+            "threats": ["Item 1", "Item 2", ...]
+        }
+        
+        Or with content wrapper:
+        {
+            "type": "swot",
+            "title": "SWOT Analysis",
+            "content": {
+                "strengths": [...],
+                "weaknesses": [...],
+                "opportunities": [...],
+                "threats": [...]
+            }
+        }
+        """
+        slide = self.prs.slides.add_slide(self.prs.slide_layouts[6])  # Blank
+
+        # Add header bar
+        header = slide.shapes.add_shape(
+            MSO_SHAPE.RECTANGLE, 0, 0, self.prs.slide_width, Inches(1.2)
+        )
+        header.fill.solid()
+        header.fill.fore_color.rgb = self.theme["header_bg"]
+        header.line.fill.background()
+
+        # Add title
+        title = slide_data.get("title", "SWOT Analysis")
+        if title:
+            title_box = slide.shapes.add_textbox(
+                Inches(0.5), Inches(0.25), Inches(12.333), Inches(0.7)
+            )
+            tf = title_box.text_frame
+            p = tf.paragraphs[0]
+            p.text = title
+            p.font.size = Pt(32)
+            p.font.bold = True
+            p.font.color.rgb = self.theme["text_light"]
+
+        # Get SWOT data
+        content = slide_data.get("content", slide_data)
+        strengths = content.get("strengths", [])
+        weaknesses = content.get("weaknesses", [])
+        opportunities = content.get("opportunities", [])
+        threats = content.get("threats", [])
+
+        # SWOT matrix colors and labels
+        swot_config = [
+            {
+                "key": "strengths",
+                "label": "Strengths\n优势",
+                "items": strengths,
+                "bg_color": RGBColor(46, 204, 113),  # Green
+                "x": 0.5, "y": 1.5
+            },
+            {
+                "key": "weaknesses", 
+                "label": "Weaknesses\n劣势",
+                "items": weaknesses,
+                "bg_color": RGBColor(231, 76, 60),  # Red
+                "x": 6.9, "y": 1.5
+            },
+            {
+                "key": "opportunities",
+                "label": "Opportunities\n机会",
+                "items": opportunities,
+                "bg_color": RGBColor(52, 152, 219),  # Blue
+                "x": 0.5, "y": 4.5
+            },
+            {
+                "key": "threats",
+                "label": "Threats\n威胁",
+                "items": threats,
+                "bg_color": RGBColor(241, 196, 15),  # Yellow
+                "x": 6.9, "y": 4.5
+            }
+        ]
+
+        # Create SWOT quadrants
+        box_width = 6.0
+        box_height = 2.8
+
+        for quad in swot_config:
+            # Create quadrant background
+            shape = slide.shapes.add_shape(
+                MSO_SHAPE.ROUNDED_RECTANGLE, 
+                Inches(quad["x"]), Inches(quad["y"]),
+                Inches(box_width), Inches(box_height)
+            )
+            shape.fill.solid()
+            shape.fill.fore_color.rgb = quad["bg_color"]
+            shape.line.color.rgb = RGBColor(100, 100, 100)
+            shape.line.width = Pt(1)
+
+            # Add label
+            label_box = slide.shapes.add_textbox(
+                Inches(quad["x"] + 0.1), Inches(quad["y"] + 0.1),
+                Inches(box_width - 0.2), Inches(0.6)
+            )
+            tf = label_box.text_frame
+            p = tf.paragraphs[0]
+            p.text = quad["label"]
+            p.font.size = Pt(14)
+            p.font.bold = True
+            p.font.color.rgb = RGBColor(255, 255, 255)
+            p.alignment = PP_ALIGN.CENTER
+
+            # Add items
+            if quad["items"]:
+                items_box = slide.shapes.add_textbox(
+                    Inches(quad["x"] + 0.2), Inches(quad["y"] + 0.75),
+                    Inches(box_width - 0.4), Inches(box_height - 0.85)
+                )
+                tf = items_box.text_frame
+                tf.word_wrap = True
+
+                for i, item in enumerate(quad["items"][:5]):  # Max 5 items
+                    if i == 0:
+                        p = tf.paragraphs[0]
+                    else:
+                        p = tf.add_paragraph()
+                    p.text = f"• {item}"
+                    p.font.size = Pt(12)
+                    p.font.color.rgb = RGBColor(255, 255, 255)
+                    p.space_after = Pt(4)
+
+        # Add axis labels
+        # Internal/External label
+        ie_label = slide.shapes.add_textbox(
+            Inches(0.1), Inches(4.2), Inches(0.4), Inches(0.3)
+        )
+        tf = ie_label.text_frame
+        p = tf.paragraphs[0]
+        p.text = "内部"
+        p.font.size = Pt(10)
+        p.font.color.rgb = self.theme["text_dark"]
+        
+        ie_label2 = slide.shapes.add_textbox(
+            Inches(0.1), Inches(5.8), Inches(0.4), Inches(0.3)
+        )
+        tf = ie_label2.text_frame
+        p = tf.paragraphs[0]
+        p.text = "外部"
+        p.font.size = Pt(10)
+        p.font.color.rgb = self.theme["text_dark"]
+
+    def _create_tech_curve_slide(self, slide_data: dict) -> None:
+        """Create technology curve visualization (similar to Gartner Hype Cycle).
+        
+        Expected slide_data format:
+        {
+            "type": "tech_curve",
+            "title": "Technology Hype Cycle",
+            "technologies": [
+                {"name": "Tech 1", "position": 0.2, "peak": "2024"},
+                {"name": "Tech 2", "position": 0.5, "peak": "2025"},
+                {"name": "Tech 3", "position": 0.8, "peak": "2026"},
+            ],
+            "phases": [
+                {"name": "Innovation Trigger", "range": [0, 0.2]},
+                {"name": "Peak of Inflated Expectations", "range": [0.2, 0.4]},
+                {"name": "Trough of Disillusionment", "range": [0.4, 0.6]},
+                {"name": "Slope of Enlightenment", "range": [0.6, 0.8]},
+                {"name": "Plateau of Productivity", "range": [0.8, 1.0]}
+            ]
+        }
+        """
+        slide = self.prs.slides.add_slide(self.prs.slide_layouts[6])  # Blank
+
+        # Add header bar
+        header = slide.shapes.add_shape(
+            MSO_SHAPE.RECTANGLE, 0, 0, self.prs.slide_width, Inches(1.2)
+        )
+        header.fill.solid()
+        header.fill.fore_color.rgb = self.theme["header_bg"]
+        header.line.fill.background()
+
+        # Add title
+        title = slide_data.get("title", "Technology Hype Cycle")
+        if title:
+            title_box = slide.shapes.add_textbox(
+                Inches(0.5), Inches(0.25), Inches(12.333), Inches(0.7)
+            )
+            tf = title_box.text_frame
+            p = tf.paragraphs[0]
+            p.text = title
+            p.font.size = Pt(32)
+            p.font.bold = True
+            p.font.color.rgb = self.theme["text_light"]
+
+        # Curve parameters
+        curve_left = 0.8
+        curve_top = 1.8
+        curve_width = 11.5
+        curve_height = 4.0
+
+        # Default phases if not provided
+        phases = slide_data.get("phases", [
+            {"name": "创新萌芽期", "range": [0, 0.2]},
+            {"name": "期望膨胀期", "range": [0.2, 0.4]},
+            {"name": "泡沫破裂期", "range": [0.4, 0.6]},
+            {"name": "稳步爬升期", "range": [0.6, 0.8]},
+            {"name": "生产成熟期", "range": [0.8, 1.0]}
+        ])
+
+        # Draw phase backgrounds
+        phase_colors = [
+            RGBColor(155, 89, 182),  # Purple
+            RGBColor(231, 76, 60),   # Red
+            RGBColor(241, 196, 15),  # Yellow
+            RGBColor(46, 204, 113),  # Green
+            RGBColor(52, 152, 219),  # Blue
+        ]
+
+        phase_width = curve_width / len(phases)
+        for i, phase in enumerate(phases):
+            # Phase background
+            x = curve_left + i * phase_width
+            shape = slide.shapes.add_shape(
+                MSO_SHAPE.RECTANGLE,
+                Inches(x), Inches(curve_top),
+                Inches(phase_width), Inches(curve_height)
+            )
+            shape.fill.solid()
+            shape.fill.fore_color.rgb = phase_colors[i % len(phase_colors)]
+            # Set transparency (lighter colors)
+            shape.fill.fore_color.brightness = 0.6
+            shape.line.color.rgb = RGBColor(200, 200, 200)
+            shape.line.width = Pt(0.5)
+
+            # Phase label
+            label_box = slide.shapes.add_textbox(
+                Inches(x + 0.1), Inches(curve_top + curve_height + 0.1),
+                Inches(phase_width - 0.2), Inches(0.6)
+            )
+            tf = label_box.text_frame
+            tf.word_wrap = True
+            p = tf.paragraphs[0]
+            p.text = phase["name"]
+            p.font.size = Pt(11)
+            p.font.bold = True
+            p.font.color.rgb = self.theme["text_dark"]
+            p.alignment = PP_ALIGN.CENTER
+
+        # Draw curve line (simplified as wavy line using shapes)
+        # We'll use a series of connected lines
+        curve_points = [
+            (0.0, 0.5),   # Start low
+            (0.15, 0.3),  # Rising
+            (0.25, 0.1),  # Peak
+            (0.35, 0.15), # Slight drop
+            (0.45, 0.6),  # Trough
+            (0.55, 0.7),  # Still low
+            (0.65, 0.5),  # Rising again
+            (0.75, 0.35), # Continues rising
+            (0.85, 0.3),  # Levels off
+            (1.0, 0.25),  # End
+        ]
+
+        # Draw curve as line (simplified - just draw the path)
+        # Since python-pptx doesn't have freeform shapes easily, 
+        # we'll draw a simplified curve using a shape
+        curve_line = slide.shapes.add_shape(
+            MSO_SHAPE.WAVE,
+            Inches(curve_left), Inches(curve_top + 0.5),
+            Inches(curve_width), Inches(curve_height - 1.0)
+        )
+        curve_line.fill.background()
+        curve_line.line.color.rgb = self.theme["accent"]
+        curve_line.line.width = Pt(3)
+
+        # Add technology markers
+        technologies = slide_data.get("technologies", [])
+        for tech in technologies[:8]:  # Max 8 technologies
+            pos = tech.get("position", 0.5)
+            name = tech.get("name", "Technology")
+            
+            # Calculate position on curve
+            x = curve_left + pos * curve_width
+            
+            # Find y position on curve (simplified)
+            # Map position to curve height
+            if pos < 0.3:
+                y_offset = 0.3 + (0.3 - pos) * 1.5  # Peak area
+            elif pos < 0.6:
+                y_offset = 0.5 + (pos - 0.3) * 0.5  # Trough
+            else:
+                y_offset = 0.6 - (pos - 0.6) * 0.5  # Recovery
+            
+            y = curve_top + y_offset * curve_height
+
+            # Draw marker
+            marker = slide.shapes.add_shape(
+                MSO_SHAPE.OVAL,
+                Inches(x - 0.15), Inches(y - 0.1),
+                Inches(0.3), Inches(0.2)
+            )
+            marker.fill.solid()
+            marker.fill.fore_color.rgb = self.theme["accent"]
+            marker.line.fill.background()
+
+            # Add label
+            label = slide.shapes.add_textbox(
+                Inches(x - 0.5), Inches(y + 0.15),
+                Inches(1.0), Inches(0.4)
+            )
+            tf = label.text_frame
+            tf.word_wrap = True
+            p = tf.paragraphs[0]
+            p.text = name
+            p.font.size = Pt(9)
+            p.font.bold = True
+            p.font.color.rgb = self.theme["text_dark"]
+            p.alignment = PP_ALIGN.CENTER
+
+        # Add Y-axis label
+        y_label = slide.shapes.add_textbox(
+            Inches(0.1), Inches(curve_top + 1.5),
+            Inches(0.5), Inches(1.0)
+        )
+        tf = y_label.text_frame
+        p = tf.paragraphs[0]
+        p.text = "期望值"
+        p.font.size = Pt(10)
+        p.font.color.rgb = self.theme["text_dark"]
 
     def _create_image_slide(self, slide_data: dict) -> None:
         """Create slide with image.
